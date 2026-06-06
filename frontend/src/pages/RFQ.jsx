@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../services/api';
 import { 
   Plus, Trash2, ChevronRight, ChevronLeft, 
   ArrowRight, Search, Eye, Trash, X
 } from 'lucide-react';
 
 const RFQ = () => {
-  const { rfqs, vendors, addRFQ } = useApp();
+  const { vendors } = useApp();
   const { user } = useAuth();
   const { addToast } = useToast();
 
+  const [rfqs, setRfqs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // all, create
   
   // All RFQs Tab filters
@@ -23,6 +26,7 @@ const RFQ = () => {
   // RFQ Detail Modal state
   const [selectedRFQ, setSelectedRFQ] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailVendors, setDetailVendors] = useState([]);
 
   // Sourcing Wizard state
   const [step, setStep] = useState(1);
@@ -42,6 +46,48 @@ const RFQ = () => {
 
   // Role permissions
   const canCreateRFQ = user?.role === 'admin' || user?.role === 'procurement_officer';
+
+  // Normalize RFQ from API to UI shape
+  const normalizeRFQ = (apiRfq) => ({
+    id: apiRfq.id,
+    rfq_number: apiRfq.rfq_number,
+    title: apiRfq.title,
+    description: apiRfq.description || '',
+    category: apiRfq.category || '',
+    deadline: apiRfq.deadline ? apiRfq.deadline.split('T')[0] : '',
+    status: apiRfq.status === 'OPEN' ? 'Sent' : apiRfq.status === 'CLOSED' ? 'Closed' : 'Draft',
+    date: apiRfq.created_at ? apiRfq.created_at.split('T')[0] : '',
+    createdBy: `User #${apiRfq.created_by}`,
+    items: (apiRfq.items || []).map(item => ({
+      id: item.id,
+      name: item.item_name,
+      description: item.description || '',
+      qty: parseFloat(item.quantity) || 0,
+      unit: item.unit || 'Pcs'
+    })),
+    assignedVendors: []
+  });
+
+  // Fetch RFQs from API
+  const fetchRFQs = async () => {
+    try {
+      const response = await api.get('/api/rfqs?size=100');
+      const mapped = response.data.items.map(normalizeRFQ);
+      setRfqs(mapped);
+    } catch (error) {
+      console.error('Error fetching RFQs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.role !== 'vendor') {
+      fetchRFQs();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   // Sourcing wizard items manipulation
   const handleAddItemRow = () => {
@@ -97,41 +143,73 @@ const RFQ = () => {
     setStep(step - 1);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (assignedVendors.length === 0) {
       addToast('Error: Please assign at least one active supplier to this RFQ.', 'warning');
       return;
     }
 
-    const payload = {
-      title: rfqDetails.title,
-      description: rfqDetails.description,
-      category: rfqDetails.category,
-      deadline: rfqDetails.deadline,
-      createdBy: user?.name || 'Procurement Agent',
-      assignedVendors,
-      items: lineItems,
-      status: 'Sent' // Immediately transit to Sent on creation
-    };
+    try {
+      const rfqNumber = `RFQ-${new Date().getFullYear()}-${String(rfqs.length + 1).padStart(4, '0')}`;
+      const payload = {
+        rfq_number: rfqNumber,
+        title: rfqDetails.title,
+        description: rfqDetails.description || null,
+        category: rfqDetails.category,
+        deadline: new Date(rfqDetails.deadline + 'T23:59:59Z').toISOString(),
+        status: 'OPEN',
+        items: lineItems.map(item => ({
+          item_name: item.name,
+          description: item.description || null,
+          quantity: item.qty,
+          unit: item.unit
+        }))
+      };
 
-    addRFQ(payload);
-    addToast('RFQ created successfully and sent to selected vendors.', 'success');
-    
-    // Reset state
-    setStep(1);
-    setRfqDetails({ title: '', description: '', category: 'Manufacturing', deadline: '' });
-    setLineItems([{ name: '', description: '', qty: 1, unit: 'Pcs' }]);
-    setAssignedVendors([]);
-    
-    // Switch to All RFQs Tab
-    setActiveTab('all');
+      const response = await api.post('/api/rfqs', payload);
+      const newRfqId = response.data.id;
+
+      // Assign vendors
+      await api.post(`/api/rfqs/${newRfqId}/vendors`, {
+        vendor_ids: assignedVendors
+      });
+
+      addToast('RFQ created successfully and sent to selected vendors.', 'success');
+      
+      // Reset state
+      setStep(1);
+      setRfqDetails({ title: '', description: '', category: 'Manufacturing', deadline: '' });
+      setLineItems([{ name: '', description: '', qty: 1, unit: 'Pcs' }]);
+      setAssignedVendors([]);
+      
+      // Refresh and switch to list tab
+      await fetchRFQs();
+      setActiveTab('all');
+    } catch (error) {
+      console.error('Error creating RFQ:', error);
+      addToast('Failed to create RFQ. Check form data.', 'error');
+    }
+  };
+
+  // Open RFQ detail and fetch its assigned vendors
+  const handleOpenDetail = async (rfq) => {
+    setSelectedRFQ(rfq);
+    setIsDetailModalOpen(true);
+    try {
+      const response = await api.get(`/api/rfqs/${rfq.id}/vendors`);
+      setDetailVendors(response.data || []);
+    } catch (error) {
+      console.error('Error fetching assigned vendors:', error);
+      setDetailVendors([]);
+    }
   };
 
   // Filter RFQs
   const filteredRFQs = rfqs.filter(rfq => {
-    const matchesSearch = rfq.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          rfq.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = (rfq.title || '').toLowerCase().includes(q) || 
+                          String(rfq.rfq_number || rfq.id).toLowerCase().includes(q);
     
     const matchesStatus = statusFilter === 'All' || rfq.status === statusFilter;
     
@@ -253,10 +331,9 @@ const RFQ = () => {
                   <tr>
                     <th>RFQ#</th>
                     <th>RFQ Project Title</th>
-                    <th>Created By</th>
+                    <th>Category</th>
                     <th>Created On</th>
                     <th>Deadline</th>
-                    <th>Sourcing Partners</th>
                     <th>Status</th>
                     <th className="text-right">Actions</th>
                   </tr>
@@ -264,43 +341,22 @@ const RFQ = () => {
                 <tbody>
                   {filteredRFQs.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center py-12 text-slate-500 font-mono text-xs">
-                        NO SOURCE INQUIRIES REGISTERED FOR THE SELECTED FILTERS
+                      <td colSpan="7" className="text-center py-12 text-slate-500 font-mono text-xs">
+                        {loading ? 'LOADING RFQs...' : 'NO SOURCE INQUIRIES REGISTERED FOR THE SELECTED FILTERS'}
                       </td>
                     </tr>
                   ) : (
                     filteredRFQs.map((rfq) => (
                       <tr 
                         key={rfq.id}
-                        onClick={() => {
-                          setSelectedRFQ(rfq);
-                          setIsDetailModalOpen(true);
-                        }}
+                        onClick={() => handleOpenDetail(rfq)}
                         className="cursor-pointer"
                       >
-                        <td className="font-mono text-xs text-indigo-400 font-bold">{rfq.id}</td>
+                        <td className="font-mono text-xs text-indigo-400 font-bold">{rfq.rfq_number}</td>
                         <td className="font-semibold text-slate-100">{rfq.title}</td>
-                        <td className="text-xs text-slate-400">{rfq.createdBy}</td>
+                        <td className="text-xs text-slate-400">{rfq.category || '-'}</td>
                         <td className="font-mono text-xs">{rfq.date}</td>
                         <td className="font-mono text-xs text-slate-200">{rfq.deadline}</td>
-                        <td>
-                          {/* Avatar stack */}
-                          <div className="flex -space-x-1.5 overflow-hidden">
-                            {rfq.assignedVendors.map((vendorId) => {
-                              const details = getVendorDetails(vendorId);
-                              if (!details) return null;
-                              return (
-                                <div 
-                                  key={vendorId}
-                                  className="inline-block h-6.5 w-6.5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-mono text-indigo-400 font-bold"
-                                  title={details.name}
-                                >
-                                  {details.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </td>
                         <td>
                           <span className={`badge-status ${
                             rfq.status === 'Sent' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-800/40' :
@@ -312,10 +368,7 @@ const RFQ = () => {
                         </td>
                         <td onClick={(e)=>e.stopPropagation()} className="text-right">
                           <button
-                            onClick={() => {
-                              setSelectedRFQ(rfq);
-                              setIsDetailModalOpen(true);
-                            }}
+                            onClick={() => handleOpenDetail(rfq)}
                             className="p-1 hover:text-white text-slate-400 hover:bg-[#1E2640] rounded transition-colors"
                             title="Review RFQ Details"
                           >
@@ -550,8 +603,8 @@ const RFQ = () => {
                 {/* Vendor Checklist */}
                 <div className="border border-slate-800 rounded max-h-60 overflow-y-auto divide-y divide-slate-850">
                   {vendors
-                    .filter(v => v.status === 'Active' && v.category === rfqDetails.category)
-                    .filter(v => v.name.toLowerCase().includes(vendorSearch.toLowerCase()))
+                    .filter(v => v.status === 'Active')
+                    .filter(v => (v.name || '').toLowerCase().includes(vendorSearch.toLowerCase()))
                     .map((vendor) => (
                       <label 
                         key={vendor.id}
@@ -567,19 +620,19 @@ const RFQ = () => {
                           <div>
                             <p className="text-xs font-semibold text-slate-200">{vendor.name}</p>
                             <p className="text-[10px] text-slate-500 font-mono">
-                              GST: {vendor.gstNumber} | Rating: {vendor.rating.toFixed(1)} ★
+                              {vendor.vendor_code} | Rating: {vendor.rating.toFixed(1)} ★
                             </p>
                           </div>
                         </div>
                         <span className="text-xs font-mono font-medium text-slate-500 bg-[#0E1527] px-2 py-0.5 rounded border border-slate-800">
-                          {vendor.category.toUpperCase()}
+                          {(vendor.category || '').toUpperCase()}
                         </span>
                       </label>
                     ))}
                   
-                  {vendors.filter(v => v.status === 'Active' && v.category === rfqDetails.category).length === 0 && (
+                  {vendors.filter(v => v.status === 'Active').length === 0 && (
                     <div className="p-4 text-center text-slate-500 text-xs font-mono">
-                      NO ACTIVE SUPPLIERS FOUND FOR CATEGORY: {rfqDetails.category.toUpperCase()}
+                      NO ACTIVE SUPPLIERS FOUND
                     </div>
                   )}
                 </div>
@@ -628,7 +681,7 @@ const RFQ = () => {
           <div className="w-full max-w-2xl bg-[#121A30] border border-slate-700 rounded-lg shadow-2xl p-6 font-sans">
             <div className="flex justify-between items-start pb-3 border-b border-slate-800 mb-4">
               <div>
-                <span className="font-mono text-xs text-indigo-400 font-bold">{selectedRFQ.id}</span>
+                <span className="font-mono text-xs text-indigo-400 font-bold">{selectedRFQ.rfq_number}</span>
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider mt-0.5">{selectedRFQ.title}</h3>
               </div>
               <button 
@@ -644,8 +697,8 @@ const RFQ = () => {
               {/* Project context */}
               <div className="grid grid-cols-2 gap-3 text-xs bg-[#0D1527] border border-slate-800 rounded p-3 font-mono">
                 <div>
-                  <span className="text-slate-500 block">Sourcing Agent</span>
-                  <span className="text-slate-200">{selectedRFQ.createdBy}</span>
+                  <span className="text-slate-500 block">Category</span>
+                  <span className="text-slate-200">{selectedRFQ.category || '-'}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">Status</span>
@@ -695,6 +748,11 @@ const RFQ = () => {
                           <td className="font-mono text-xs text-right text-slate-400">{item.unit}</td>
                         </tr>
                       ))}
+                      {(!selectedRFQ.items || selectedRFQ.items.length === 0) && (
+                        <tr>
+                          <td colSpan="4" className="text-center py-4 text-slate-500 text-xs font-mono">NO LINE ITEMS</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -704,23 +762,22 @@ const RFQ = () => {
               <div>
                 <span className="block text-xs font-mono text-slate-400 uppercase mb-2">Solicited Vendors Pool</span>
                 <div className="flex flex-wrap gap-2">
-                  {selectedRFQ.assignedVendors.map((vendorId) => {
-                    const details = getVendorDetails(vendorId);
-                    return (
-                      <div 
-                        key={vendorId}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#0D1527] border border-slate-800 rounded text-xs"
-                      >
-                        <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] font-mono text-indigo-400 font-bold uppercase">
-                          {details?.name.split(' ').map(n=>n[0]).join('').substring(0,2)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate-200">{details?.name || vendorId}</p>
-                          <p className="text-[9px] text-slate-500 font-mono">Rating: {details?.rating.toFixed(1)} ★</p>
-                        </div>
+                  {detailVendors.length > 0 ? detailVendors.map((v) => (
+                    <div 
+                      key={v.id}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-[#0D1527] border border-slate-800 rounded text-xs"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] font-mono text-indigo-400 font-bold uppercase">
+                        {v.company_name.split(' ').map(n=>n[0]).join('').substring(0,2)}
                       </div>
-                    );
-                  })}
+                      <div>
+                        <p className="font-semibold text-slate-200">{v.company_name}</p>
+                        <p className="text-[9px] text-slate-500 font-mono">Rating: {parseFloat(v.rating || 0).toFixed(1)} ★</p>
+                      </div>
+                    </div>
+                  )) : (
+                    <span className="text-xs text-slate-500 font-mono">No vendors assigned</span>
+                  )}
                 </div>
               </div>
 

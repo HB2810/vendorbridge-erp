@@ -1,78 +1,159 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../services/api';
 import { 
   Calendar, Clock, Eye, X
 } from 'lucide-react';
 
-const generatePORef = () => `PO-2024-00${Math.floor(10 + Math.random() * 90)}`;
-
 const Quotations = () => {
-  const { rfqs, quotations, updateQuotationStatus, addApproval, approvals } = useApp();
+  const { vendors } = useApp();
   const { user } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Active RFQ filter selection
-  const activeRFQs = rfqs.filter(r => r.status === 'Sent');
-  const [selectedRFQId, setSelectedRFQId] = useState(activeRFQs[0]?.id || 'RFQ-2024-001');
+  const [rfqs, setRfqs] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedRFQId, setSelectedRFQId] = useState('');
 
   // Detail Modal states
   const [selectedQuotation, setSelectedQuotation] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Active RFQ details
-  const currentRFQ = rfqs.find(r => r.id === selectedRFQId);
+  // Fetch RFQs on mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const res = await api.get('/api/rfqs?size=100');
+        // Filter OPEN (Sent) rfqs
+        const mappedRfqs = res.data.items.map(r => ({
+          id: r.id,
+          rfq_number: r.rfq_number,
+          title: r.title,
+          status: r.status === 'OPEN' ? 'Sent' : r.status === 'CLOSED' ? 'Closed' : 'Draft',
+          deadline: r.deadline ? r.deadline.split('T')[0] : '',
+          assignedVendors: [], // We don't strictly need vendor count here, but UI uses it
+          items: r.items || []
+        }));
+        
+        const active = mappedRfqs.filter(r => r.status === 'Sent');
+        setRfqs(active);
+        if (active.length > 0) {
+          setSelectedRFQId(active[0].id.toString());
+        }
+      } catch (err) {
+        console.error('Failed to fetch RFQs:', err);
+      }
+    };
+    if (user) {
+      fetchInitialData();
+    }
+  }, [user]);
 
-  // Filter quotations for selected RFQ
-  const currentQuotations = quotations.filter(q => q.rfqId === selectedRFQId);
+  // Fetch quotations when RFQ selection changes
+  useEffect(() => {
+    const fetchQuotations = async () => {
+      if (!selectedRFQId) return;
+      setLoading(true);
+      try {
+        const res = await api.get(`/api/rfqs/${selectedRFQId}/quotations?size=100`);
+        setQuotations(res.data.items);
+      } catch (err) {
+        console.error('Failed to fetch quotations:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuotations();
+  }, [selectedRFQId]);
+
+  const currentRFQ = rfqs.find(r => r.id.toString() === selectedRFQId);
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(val);
+    }).format(val || 0);
   };
 
-  const handleAcceptQuotation = (quotation) => {
-    // 1. Update quotation status
-    updateQuotationStatus(quotation.id, 'Accepted');
-    
-    // 2. Reject other quotations for this RFQ
-    currentQuotations.forEach(q => {
-      if (q.id !== quotation.id) {
-        updateQuotationStatus(q.id, 'Rejected');
+  const getVendorName = (vendorId) => {
+    const v = vendors.find(v => v.id === vendorId);
+    return v ? v.name : `Vendor #${vendorId}`;
+  };
+
+  // Enhance quotation with RFQ items and derived pricing
+  const enhanceQuotation = (q) => {
+    const totalQty = currentRFQ?.items.reduce((sum, item) => sum + parseFloat(item.quantity || 1), 0) || 1;
+    const items = currentRFQ?.items.map(item => {
+      const qty = parseFloat(item.quantity || 1);
+      const ratio = qty / totalQty;
+      const itemTotal = parseFloat(q.subtotal) * ratio;
+      return {
+        name: item.item_name,
+        qty: qty,
+        unit: item.unit,
+        unitPrice: itemTotal / qty,
+        total: itemTotal
+      };
+    }) || [];
+
+    return {
+      ...q,
+      vendorName: getVendorName(q.vendor_id),
+      submissionDate: q.submitted_at ? q.submitted_at.split('T')[0] : q.created_at.split('T')[0],
+      deliveryTimeline: `${q.delivery_days} days`,
+      paymentTerms: 'Standard Net 30', // Mock since missing in backend
+      warrantyNotes: q.remarks,
+      items: items
+    };
+  };
+
+  const displayQuotations = quotations.map(enhanceQuotation);
+
+  const handleAcceptQuotation = async (quotation) => {
+    try {
+      await api.post(`/api/approvals/${quotation.id}/approve`, { remarks: 'Auto-approved from Quotations view' });
+      addToast(`Quotation ${quotation.id} accepted. Proceeding to Approvals workflow.`, 'success');
+      
+      // Reject others
+      for (const q of quotations) {
+        if (q.id !== quotation.id && q.status !== 'REJECTED' && q.status !== 'ACCEPTED') {
+          try {
+            await api.post(`/api/approvals/${q.id}/reject`, { remarks: 'Another quotation was accepted' });
+          } catch (e) {
+            console.error('Failed to reject sibling quote', q.id);
+          }
+        }
       }
-    });
 
-    // 3. Create Approval Workflow Record if not already created
-    const refNum = generatePORef();
-    const hasExistingApproval = approvals.some(app => app.rfqId === quotation.rfqId && app.vendorName === quotation.vendorName);
-    
-    if (!hasExistingApproval) {
-      addApproval({
-        poReference: refNum,
-        rfqId: quotation.rfqId,
-        rfqTitle: currentRFQ?.title || 'Sourced Procurement Parts',
-        vendorName: quotation.vendorName,
-        amount: quotation.grandTotal,
-        requestedBy: user?.name || 'Procurement Officer',
-        status: 'Pending',
-        remarks: `Auto-generated approval request following acceptance of Quotation ${quotation.id}.`
-      });
+      navigate('/approvals');
+    } catch (error) {
+      if (error.response?.status === 403) {
+        addToast('Permission denied: Only Admin or Manager can accept quotes directly.', 'error');
+      } else {
+        addToast('Failed to accept quotation.', 'error');
+      }
     }
-
-    addToast(`Quotation ${quotation.id} accepted. Proceeding to Approvals workflow.`, 'success');
-    
-    // Redirect to comparison or approvals page
-    navigate('/approvals');
   };
 
-  const handleRejectQuotation = (quotationId) => {
-    updateQuotationStatus(quotationId, 'Rejected');
-    addToast(`Quotation ${quotationId} has been rejected.`, 'info');
+  const handleRejectQuotation = async (quotationId) => {
+    try {
+      await api.post(`/api/approvals/${quotationId}/reject`, { remarks: 'Rejected from Quotations view' });
+      addToast(`Quotation ${quotationId} has been rejected.`, 'info');
+      // Refresh
+      const res = await api.get(`/api/rfqs/${selectedRFQId}/quotations?size=100`);
+      setQuotations(res.data.items);
+    } catch (error) {
+      if (error.response?.status === 403) {
+        addToast('Permission denied: Only Admin or Manager can reject quotes directly.', 'error');
+      } else {
+        addToast('Failed to reject quotation.', 'error');
+      }
+    }
   };
 
   return (
@@ -87,9 +168,10 @@ const Quotations = () => {
             onChange={(e) => setSelectedRFQId(e.target.value)}
             className="w-full md:w-80 font-mono text-xs bg-[#0D1527] border border-slate-700"
           >
+            {rfqs.length === 0 && <option value="">No Active RFQs found</option>}
             {rfqs.map((rfq) => (
               <option key={rfq.id} value={rfq.id}>
-                {rfq.id} - {rfq.title} ({rfq.status})
+                {rfq.rfq_number} - {rfq.title} ({rfq.status})
               </option>
             ))}
           </select>
@@ -98,26 +180,30 @@ const Quotations = () => {
         {currentRFQ && (
           <div className="text-xs bg-[#0E1527] border border-slate-800 rounded p-3 font-mono flex-1 md:max-w-md">
             <p className="text-slate-400"><strong className="text-indigo-400">Project Deadline:</strong> {currentRFQ.deadline}</p>
-            <p className="text-slate-400 mt-1 truncate"><strong className="text-indigo-400">Solicitations:</strong> {currentRFQ.assignedVendors.length} vendors invited</p>
+            <p className="text-slate-400 mt-1 truncate"><strong className="text-indigo-400">Line Items:</strong> {currentRFQ.items.length}</p>
           </div>
         )}
       </div>
 
       {/* Quotations Card Grid */}
-      {currentQuotations.length === 0 ? (
+      {loading ? (
+        <div className="bg-slate-surface border border-slate-700 p-12 text-center text-slate-500 font-mono text-xs rounded">
+          LOADING BID SUBMISSIONS...
+        </div>
+      ) : displayQuotations.length === 0 ? (
         <div className="bg-slate-surface border border-slate-700 p-12 text-center text-slate-500 font-mono text-xs rounded">
           NO BID SUBMISSIONS RECORDED FOR SELECTED RFQ YET
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentQuotations.map((q) => {
+          {displayQuotations.map((q) => {
             const initials = q.vendorName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
             return (
               <div 
                 key={q.id}
                 className={`bg-slate-surface border rounded-lg shadow-lg flex flex-col justify-between overflow-hidden transition-all ${
-                  q.status === 'Accepted' ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.05)]' :
-                  q.status === 'Rejected' ? 'border-rose-500/20 opacity-60' :
+                  q.status === 'ACCEPTED' ? 'border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.05)]' :
+                  q.status === 'REJECTED' ? 'border-rose-500/20 opacity-60' :
                   'border-slate-700 hover:border-slate-500'
                 }`}
               >
@@ -132,14 +218,14 @@ const Quotations = () => {
                       <h4 className="font-semibold text-white text-sm truncate max-w-[140px]" title={q.vendorName}>
                         {q.vendorName}
                       </h4>
-                      <span className="text-[10px] font-mono text-indigo-400 font-bold block">{q.id}</span>
+                      <span className="text-[10px] font-mono text-indigo-400 font-bold block">Quote #{q.id}</span>
                     </div>
                   </div>
 
                   <span className={`badge-status scale-90 origin-right ${
-                    q.status === 'Accepted' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40' :
-                    q.status === 'Rejected' ? 'bg-rose-950/40 text-rose-400 border-rose-800/40' :
-                    q.status === 'Submitted' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-800/40' :
+                    q.status === 'ACCEPTED' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40' :
+                    q.status === 'REJECTED' ? 'bg-rose-950/40 text-rose-400 border-rose-800/40' :
+                    q.status === 'SUBMITTED' ? 'bg-indigo-950/40 text-indigo-400 border-indigo-800/40' :
                     'bg-amber-950/40 text-amber-warning border-amber-800/40'
                   }`}>
                     {q.status}
@@ -174,6 +260,9 @@ const Quotations = () => {
                       {q.items.length > 2 && (
                         <li className="text-[10px] text-slate-500 italic mt-1">+ {q.items.length - 2} more item specifications</li>
                       )}
+                      {q.items.length === 0 && (
+                        <li className="text-[10px] text-slate-500 italic">No specific items listed</li>
+                      )}
                     </ul>
                   </div>
 
@@ -181,11 +270,11 @@ const Quotations = () => {
                   <div className="border-t border-slate-800 pt-3 flex justify-between items-end">
                     <div>
                       <span className="text-[10px] font-mono text-slate-500 uppercase">Grand Total (Incl Tax)</span>
-                      <p className="text-xl font-bold font-mono text-white tracking-tight">{formatCurrency(q.grandTotal)}</p>
+                      <p className="text-xl font-bold font-mono text-white tracking-tight">{formatCurrency(q.grand_total)}</p>
                     </div>
                     <div className="text-right text-[10px] font-mono text-slate-500">
                       <span>Subtotal: {formatCurrency(q.subtotal)}</span>
-                      <span className="block">Tax: {q.taxPercentage}% GST</span>
+                      <span className="block">Tax: {q.tax_percent}% GST</span>
                     </div>
                   </div>
 
@@ -202,7 +291,7 @@ const Quotations = () => {
                   >
                     <Eye className="w-3.5 h-3.5" /> Details
                   </button>
-                  {user?.role !== 'vendor' && q.status !== 'Accepted' && q.status !== 'Rejected' && (
+                  {user?.role !== 'vendor' && q.status !== 'ACCEPTED' && q.status !== 'REJECTED' && (
                     <>
                       <button
                         onClick={() => handleAcceptQuotation(q)}
@@ -234,7 +323,7 @@ const Quotations = () => {
             {/* Header */}
             <div className="flex justify-between items-start pb-3 border-b border-slate-800 mb-4">
               <div>
-                <span className="font-mono text-xs text-indigo-400 font-bold">{selectedQuotation.id} - COMMERCIAL BID</span>
+                <span className="font-mono text-xs text-indigo-400 font-bold">QUOTE #{selectedQuotation.id} - COMMERCIAL BID</span>
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider mt-0.5">{selectedQuotation.vendorName}</h3>
               </div>
               <button 
@@ -263,7 +352,7 @@ const Quotations = () => {
                 </div>
                 <div>
                   <span className="text-slate-500 block">Tax Surcharge</span>
-                  <span className="text-slate-200">{selectedQuotation.taxPercentage}% GST</span>
+                  <span className="text-slate-200">{selectedQuotation.tax_percent}% GST</span>
                 </div>
               </div>
 
@@ -306,13 +395,13 @@ const Quotations = () => {
                       </tr>
                       <tr className="bg-[#0B1123] hover:bg-transparent">
                         <td colSpan="2" className="border-0"></td>
-                        <td className="font-mono text-xs text-right text-slate-500 border-0">GST ({selectedQuotation.taxPercentage}%):</td>
-                        <td className="font-mono text-xs text-right text-slate-200 border-0">{formatCurrency(selectedQuotation.subtotal * (selectedQuotation.taxPercentage/100))}</td>
+                        <td className="font-mono text-xs text-right text-slate-500 border-0">GST ({selectedQuotation.tax_percent}%):</td>
+                        <td className="font-mono text-xs text-right text-slate-200 border-0">{formatCurrency(parseFloat(selectedQuotation.subtotal) * (parseFloat(selectedQuotation.tax_percent)/100))}</td>
                       </tr>
                       <tr className="bg-[#0B1123] hover:bg-transparent">
                         <td colSpan="2" className="border-0"></td>
                         <td className="font-mono text-xs text-right text-slate-400 font-bold uppercase border-0">Grand Total:</td>
-                        <td className="font-mono text-sm text-right text-indigo-400 font-bold border-0">{formatCurrency(selectedQuotation.grandTotal)}</td>
+                        <td className="font-mono text-sm text-right text-indigo-400 font-bold border-0">{formatCurrency(selectedQuotation.grand_total)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -329,7 +418,7 @@ const Quotations = () => {
               >
                 Close breakdown
               </button>
-              {user?.role !== 'vendor' && selectedQuotation.status !== 'Accepted' && selectedQuotation.status !== 'Rejected' && (
+              {user?.role !== 'vendor' && selectedQuotation.status !== 'ACCEPTED' && selectedQuotation.status !== 'REJECTED' && (
                 <button
                   type="button"
                   onClick={() => {

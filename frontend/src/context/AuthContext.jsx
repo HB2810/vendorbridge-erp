@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect } from 'react';
+import api from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -11,22 +12,11 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const verifySession = async () => {
       const token = localStorage.getItem('vendorbridge_token');
-      const savedUser = localStorage.getItem('vendorbridge_user');
       if (token) {
         try {
-          const response = await fetch('http://127.0.0.1:8000/api/auth/me', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setUser(data);
-            localStorage.setItem('vendorbridge_user', JSON.stringify(data));
-          } else {
-            logout();
-          }
+          const response = await api.get('/api/auth/me');
+          setUser(response.data);
+          localStorage.setItem('vendorbridge_user', JSON.stringify(response.data));
         } catch (error) {
           console.error('Session verification failed:', error);
           logout();
@@ -39,40 +29,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Authentication failed. Check your credentials.');
-      }
-
-      const { access_token } = await response.json();
+      const response = await api.post('/api/auth/login', { email, password });
+      const { access_token } = response.data;
       localStorage.setItem('vendorbridge_token', access_token);
 
-      const meResponse = await fetch('http://127.0.0.1:8000/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${access_token}`
-        }
-      });
-
-      if (!meResponse.ok) {
-        throw new Error('Failed to retrieve user profile.');
-      }
-
-      const data = await meResponse.json();
+      const meResponse = await api.get('/api/auth/me');
+      const data = meResponse.data;
       setUser(data);
       localStorage.setItem('vendorbridge_user', JSON.stringify(data));
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      throw new Error(error.detail || 'Authentication failed. Check your credentials.');
     }
   };
 

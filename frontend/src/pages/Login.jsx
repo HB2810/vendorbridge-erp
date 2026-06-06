@@ -68,9 +68,10 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center login-mesh relative px-4">
-      {/* Decorative Matrix Lines */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(37,99,235,0.08)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80"></div>
+    <div className="min-h-screen flex items-center justify-center login-mesh relative px-4 overflow-hidden">
+      {/* Modern Soft Ambient Blobs */}
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-blue-300/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none"></div>
       
       <div className="w-full max-w-md bg-white/90 border border-slate-200 rounded-lg shadow-[0_0_40px_rgba(37,99,235,0.06)] backdrop-blur-md p-8 relative z-10">
         

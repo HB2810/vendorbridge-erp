@@ -88,4 +88,3 @@ def get_purchase_order(
             )
 
     return po
-"""

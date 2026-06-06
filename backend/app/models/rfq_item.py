@@ -39,10 +39,10 @@ class RFQItem(Base):
     rfq: Mapped["RFQ"] = relationship(  # noqa: F821
         back_populates="items"
     )
-    QuotationItem = None
-    quotation_items: Mapped[list["QuotationItem"]] = relationship(  # noqa: F821
-        back_populates="rfq_item"
-    )
+    # QuotationItem = None
+    # quotation_items: Mapped[list["QuotationItem"]] = relationship(  # noqa: F821
+    #     back_populates="rfq_item"
+    # )
 
     def __repr__(self) -> str:
         return f"<RFQItem id={self.id} name={self.item_name!r} qty={self.quantity}>"

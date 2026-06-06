@@ -42,15 +42,15 @@ class Vendor(Base, TimestampMixin):
     rfq_assignments: Mapped[list["RFQVendorAssignment"]] = relationship(  # noqa: F821
         back_populates="vendor"
     )
-    quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
-        back_populates="vendor"
-    )
-    purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
-        back_populates="vendor"
-    )
-    invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
-        back_populates="vendor"
-    )
+    # quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
+    #     back_populates="vendor"
+    # )
+    # purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
+    #     back_populates="vendor"
+    # )
+    # invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
+    #     back_populates="vendor"
+    # )
 
     def __repr__(self) -> str:
         return f"<Vendor id={self.id} company={self.company_name!r} status={self.status!r}>"

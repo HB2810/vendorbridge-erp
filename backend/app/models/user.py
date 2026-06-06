@@ -29,18 +29,18 @@ class User(Base, TimestampMixin):
     rfqs: Mapped[list["RFQ"]] = relationship(  # noqa: F821
         back_populates="creator", foreign_keys="RFQ.created_by"
     )
-    approvals: Mapped[list["Approval"]] = relationship(  # noqa: F821
-        back_populates="approver"
-    )
-    issued_purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
-        back_populates="issuer", foreign_keys="PurchaseOrder.issued_by"
-    )
-    submitted_invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
-        back_populates="submitter", foreign_keys="Invoice.submitted_by"
-    )
-    activity_logs: Mapped[list["ActivityLog"]] = relationship(  # noqa: F821
-        back_populates="user"
-    )
+    # approvals: Mapped[list["Approval"]] = relationship(  # noqa: F821
+    #     back_populates="approver"
+    # )
+    # issued_purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
+    #     back_populates="issuer", foreign_keys="PurchaseOrder.issued_by"
+    # )
+    # submitted_invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
+    #     back_populates="submitter", foreign_keys="Invoice.submitted_by"
+    # )
+    # activity_logs: Mapped[list["ActivityLog"]] = relationship(  # noqa: F821
+    #     back_populates="user"
+    # )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role!r}>"

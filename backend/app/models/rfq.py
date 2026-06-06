@@ -41,9 +41,9 @@ class RFQ(Base, TimestampMixin):
     vendor_assignments: Mapped[list["RFQVendorAssignment"]] = relationship(  # noqa: F821
         back_populates="rfq", cascade="all, delete-orphan"
     )
-    quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
-        back_populates="rfq"
-    )
+    # quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
+    #     back_populates="rfq"
+    # )
 
     def __repr__(self) -> str:
         return f"<RFQ id={self.id} number={self.rfq_number!r} status={self.status!r}>"

@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.database.database import Base, engine
+from app import models  # noqa: F401
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(

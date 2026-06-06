@@ -1,2 +1,1 @@
-"""Core configuration, security, and authorization helpers."""
-
+"""Core configuration and cross-cutting concerns."""

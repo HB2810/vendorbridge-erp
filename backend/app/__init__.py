@@ -1,2 +1,1 @@
-"""VendorBridge backend application package."""
-
+"""VendorBridge ERP backend application."""

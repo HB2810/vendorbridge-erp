@@ -1,2 +1,1 @@
-"""SQLAlchemy models for VendorBridge."""
-
+"""SQLAlchemy ORM model definitions (added in later phases)."""

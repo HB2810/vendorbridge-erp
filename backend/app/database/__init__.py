@@ -1,2 +1,1 @@
-"""Database connection and seed helpers."""
-
+"""Database connection and session management."""

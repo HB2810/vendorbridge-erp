@@ -1,2 +1,1 @@
-"""Utility helpers for generated documents."""
-
+"""Shared utility helpers (added in later phases)."""

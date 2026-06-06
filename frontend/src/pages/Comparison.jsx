@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../services/api';
 import { 
   Radar, RadarChart, PolarGrid, PolarAngleAxis, 
   PolarRadiusAxis, ResponsiveContainer, Legend
@@ -11,52 +12,105 @@ import {
   ArrowRight, Star, ThumbsUp 
 } from 'lucide-react';
 
-const generatePORef = () => `PO-2024-00${Math.floor(10 + Math.random() * 90)}`;
-
 const Comparison = () => {
-  const { rfqs, quotations, vendors, addApproval, approvals, updateQuotationStatus } = useApp();
+  const { vendors } = useApp();
   const { user } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Filter RFQs that have quotations
-  const rfqOptions = rfqs.filter(r => quotations.some(q => q.rfqId === r.id));
-  const [selectedRFQId, setSelectedRFQId] = useState(rfqOptions[0]?.id || 'RFQ-2024-001');
+  const [rfqs, setRfqs] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [selectedRFQId, setSelectedRFQId] = useState('');
+  const [recommendation, setRecommendation] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const currentRFQ = rfqs.find(r => r.id === selectedRFQId);
-  const currentQuotations = quotations.filter(q => q.rfqId === selectedRFQId);
+  useEffect(() => {
+    const fetchInitial = async () => {
+      try {
+        const res = await api.get('/api/rfqs?size=100');
+        const allRfqs = res.data.items;
+        setRfqs(allRfqs);
+        if (allRfqs.length > 0) {
+          setSelectedRFQId(allRfqs[0].id.toString());
+        }
+      } catch (err) {
+        console.error('Failed to fetch RFQs:', err);
+      }
+    };
+    if (user) fetchInitial();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchComparisons = async () => {
+      if (!selectedRFQId) return;
+      setLoading(true);
+      setRecommendation(null);
+      try {
+        // Fetch quotations
+        const res = await api.get(`/api/rfqs/${selectedRFQId}/quotations?size=100`);
+        setQuotations(res.data.items);
+
+        // Fetch recommendation if 2 or more quotations
+        if (res.data.items.length >= 2) {
+          const recRes = await api.get(`/api/comparison/${selectedRFQId}/recommendation`);
+          setRecommendation(recRes.data);
+        }
+      } catch (err) {
+        console.error('Comparison fetch error:', err);
+        if (err.response?.status !== 400 && err.response?.status !== 404) {
+          addToast('Failed to fetch comparison data.', 'error');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchComparisons();
+  }, [selectedRFQId]);
+
+  const currentRFQ = rfqs.find(r => r.id.toString() === selectedRFQId);
+
+  const getVendorName = (vendorId) => {
+    const v = vendors.find(v => v.id === vendorId);
+    return v ? v.name : `Vendor #${vendorId}`;
+  };
+
+  const getVendorRating = (vendorId) => {
+    const v = vendors.find(v => v.id === vendorId);
+    return v ? parseFloat(v.rating || 4.0) : 4.0;
+  };
+
+  // Enhance quotations with vendor names and numbers
+  const currentQuotations = quotations.map(q => ({
+    ...q,
+    vendorName: getVendorName(q.vendor_id),
+    vendorRating: getVendorRating(q.vendor_id),
+    grandTotal: parseFloat(q.grand_total),
+    subtotal: parseFloat(q.subtotal),
+    taxPercentage: parseFloat(q.tax_percent),
+    deliveryTimeline: `${q.delivery_days} days`
+  }));
+
+  const recommendedQuotation = currentQuotations.find(q => 
+    recommendation && q.vendorName === recommendation.recommended_vendor
+  );
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       maximumFractionDigits: 0
-    }).format(val);
+    }).format(val || 0);
   };
 
-  // Find lowest and highest grand total for highlighting
   const totals = currentQuotations.map(q => q.grandTotal);
-  const minTotal = Math.min(...totals);
-  const maxTotal = Math.max(...totals);
+  const minTotal = totals.length > 0 ? Math.min(...totals) : 0;
+  const maxTotal = totals.length > 0 ? Math.max(...totals) : 0;
 
-  // Find recommended vendor (lowest total price)
-  const recommendedQuotation = currentQuotations.reduce((best, curr) => {
-    if (!best) return curr;
-    return curr.grandTotal < best.grandTotal ? curr : best;
-  }, null);
-
-  // Generate Radar Chart Data
-  // Axis: Price (low price = high score), Speed (fast delivery = high score), Rating (0-100), Reliability (mock index)
   const getRadarData = () => {
     if (currentQuotations.length === 0) return [];
     
-    // Parse delivery days
-    const parseDays = (timelineStr) => {
-      const num = parseInt(timelineStr);
-      return isNaN(num) ? 30 : num;
-    };
-
-    const deliveryDaysList = currentQuotations.map(q => parseDays(q.deliveryTimeline));
+    const parseDays = (q) => parseInt(q.delivery_days || 30);
+    const deliveryDaysList = currentQuotations.map(parseDays);
     const maxDays = Math.max(...deliveryDaysList, 30);
     const minDays = Math.min(...deliveryDaysList, 5);
 
@@ -66,75 +120,56 @@ const Comparison = () => {
       const dataPoint = { subject: metric };
       
       currentQuotations.forEach(q => {
-        const vendorInfo = vendors.find(v => v.id === q.vendorId);
-        const ratingScore = (vendorInfo?.rating || q.vendorRating || 4.0) * 20; // Scale 0-5 to 0-100
-        
-        let score = 70; // default baseline score
+        const ratingScore = q.vendorRating * 20; 
+        let score = 70; 
         
         if (metric === 'Price Index') {
-          // Normalize price score (lowest price = 100, highest price = 50)
-          if (maxTotal === minTotal) {
-            score = 90;
-          } else {
-            score = 100 - ((q.grandTotal - minTotal) / (maxTotal - minTotal)) * 50;
-          }
+          if (maxTotal === minTotal) score = 90;
+          else score = 100 - ((q.grandTotal - minTotal) / (maxTotal - minTotal)) * 50;
         } else if (metric === 'Delivery Speed') {
-          const days = parseDays(q.deliveryTimeline);
-          if (maxDays === minDays) {
-            score = 90;
-          } else {
-            score = 100 - ((days - minDays) / (maxDays - minDays)) * 50;
-          }
+          const days = parseDays(q);
+          if (maxDays === minDays) score = 90;
+          else score = 100 - ((days - minDays) / (maxDays - minDays)) * 50;
         } else if (metric === 'Vendor Rating') {
           score = ratingScore;
         } else if (metric === 'Reliability Index') {
-          // Calculate mock reliability index using rating + past PO count
-          const poCount = vendorInfo?.pastPOs?.length || 0;
-          score = Math.min(75 + poCount * 5 + (ratingScore - 80) * 0.5, 98);
+          score = Math.min(75 + (ratingScore - 80) * 0.5, 98);
         }
-
         dataPoint[q.vendorName] = Math.round(score);
       });
-      
       return dataPoint;
     });
   };
 
   const radarData = getRadarData();
 
-  const handleProceedWithVendor = (quotation) => {
-    // 1. Set selected quotation to 'Accepted'
-    updateQuotationStatus(quotation.id, 'Accepted');
+  const handleProceedWithVendor = async (quotation) => {
+    try {
+      // 1. Approve selected quotation using Approval Workflow API
+      await api.post(`/api/approvals/${quotation.id}/approve`, { remarks: 'System Comparison Checkout' });
 
-    // 2. Set other quotations for this RFQ to 'Rejected'
-    currentQuotations.forEach(q => {
-      if (q.id !== quotation.id) {
-        updateQuotationStatus(q.id, 'Rejected');
+      // 2. Reject other quotations for this RFQ
+      for (const q of currentQuotations) {
+        if (q.id !== quotation.id && q.status !== 'REJECTED' && q.status !== 'ACCEPTED') {
+          try {
+            await api.post(`/api/approvals/${q.id}/reject`, { remarks: 'Not selected during comparison' });
+          } catch (e) {
+            console.error('Failed to reject sibling quote', q.id);
+          }
+        }
       }
-    });
 
-    // 3. Create Approval instance if not already existing
-    const refNum = generatePORef();
-    const hasExistingApproval = approvals.some(app => app.rfqId === quotation.rfqId && app.vendorName === quotation.vendorName);
-    
-    if (!hasExistingApproval) {
-      addApproval({
-        poReference: refNum,
-        rfqId: quotation.rfqId,
-        rfqTitle: currentRFQ?.title || 'Sourced Procurement Parts',
-        vendorName: quotation.vendorName,
-        amount: quotation.grandTotal,
-        requestedBy: user?.name || 'Procurement Officer',
-        status: 'Pending',
-        remarks: `Initiated comparison checkout. Proceeding with recommended vendor ${quotation.vendorName}.`
-      });
+      addToast(`Approved Selection: Proceeding with ${quotation.vendorName}. Created Approval workflow.`, 'success');
+      navigate('/approvals');
+    } catch (error) {
+      if (error.response?.status === 403) {
+        addToast('Permission denied: Only Admin or Manager can approve quotes.', 'error');
+      } else {
+        addToast('Failed to checkout and approve vendor.', 'error');
+      }
     }
-
-    addToast(`Approved Selection: Proceeding with ${quotation.vendorName}. Created Approval workflow.`, 'success');
-    navigate('/approvals');
   };
 
-  // Radar colors mapping
   const radarColors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444'];
 
   return (
@@ -149,26 +184,31 @@ const Comparison = () => {
             onChange={(e) => setSelectedRFQId(e.target.value)}
             className="w-full md:w-80 font-mono text-xs bg-[#0D1527] border border-slate-700"
           >
-            {rfqOptions.map((rfq) => (
+            {rfqs.length === 0 && <option value="">No RFQs Available</option>}
+            {rfqs.map((rfq) => (
               <option key={rfq.id} value={rfq.id}>
-                {rfq.id} - {rfq.title}
+                {rfq.rfq_number} - {rfq.title}
               </option>
             ))}
           </select>
         </div>
 
-        {recommendedQuotation && (
+        {recommendation && recommendedQuotation && (
           <div className="bg-emerald-950/30 border border-emerald-800/40 rounded p-3 text-xs flex items-center gap-2.5 max-w-md">
             <ThumbsUp className="w-5 h-5 text-emerald-400 shrink-0 animate-pulse" />
             <div>
               <p className="font-semibold text-emerald-400 font-mono uppercase tracking-wide text-[10px]">SYSTEM COMMERCIAL RECOMMENDATION</p>
-              <p className="text-slate-300 mt-0.5">Proceed with <strong>{recommendedQuotation.vendorName}</strong> due to lowest cost index ({formatCurrency(recommendedQuotation.grandTotal)}).</p>
+              <p className="text-slate-300 mt-0.5">Proceed with <strong>{recommendation.recommended_vendor}</strong>. {recommendation.reason} ({recommendation.score} pts).</p>
             </div>
           </div>
         )}
       </div>
 
-      {currentQuotations.length === 0 ? (
+      {loading ? (
+        <div className="bg-slate-surface border border-slate-700 p-12 text-center text-slate-500 font-mono text-xs rounded">
+          LOADING BID COMPARISONS...
+        </div>
+      ) : currentQuotations.length === 0 ? (
         <div className="bg-slate-surface border border-slate-700 p-12 text-center text-slate-500 font-mono text-xs rounded">
           NO BID COMPARISONS AVAILABLE. BROADCAST AN RFQ AND SECURE SUBMISSIONS FIRST.
         </div>
@@ -190,7 +230,7 @@ const Comparison = () => {
                       return (
                         <th key={q.id} className="text-center font-mono relative">
                           <span className="block text-slate-200 font-semibold font-sans">{q.vendorName}</span>
-                          <span className="text-[10px] text-slate-500">{q.id}</span>
+                          <span className="text-[10px] text-slate-500">Quote #{q.id}</span>
                           {isBest && (
                             <span className="absolute top-0 right-0 bg-emerald-600 text-white font-mono text-[8px] font-bold px-1.5 py-0.5 rounded-bl tracking-widest uppercase">
                               RECOMMENDED
@@ -207,12 +247,11 @@ const Comparison = () => {
                   <tr>
                     <td className="font-semibold text-slate-400">Supplier Quality Score</td>
                     {currentQuotations.map((q) => {
-                      const vendorDetails = vendors.find(v => v.id === q.vendorId);
                       return (
                         <td key={q.id} className="text-center font-mono text-xs">
                           <div className="flex items-center justify-center gap-1">
                             <Star className="w-3.5 h-3.5 fill-current text-amber-warning" />
-                            <span className="font-bold text-white">{vendorDetails?.rating.toFixed(1) || '4.0'} / 5.0</span>
+                            <span className="font-bold text-white">{q.vendorRating.toFixed(1)} / 5.0</span>
                           </div>
                         </td>
                       );
@@ -264,7 +303,6 @@ const Comparison = () => {
                   <tr>
                     <td className="font-semibold text-slate-400">Delivery Lead Timeline</td>
                     {currentQuotations.map((q) => {
-                      // Highlight fastest delivery (we can parse number)
                       const isFastest = q.deliveryTimeline === currentQuotations.reduce((best, curr) => 
                         parseInt(curr.deliveryTimeline) < parseInt(best.deliveryTimeline) ? curr : best
                       ).deliveryTimeline;
@@ -287,7 +325,7 @@ const Comparison = () => {
                     <td className="font-semibold text-slate-400">Payment Terms Agreement</td>
                     {currentQuotations.map((q) => (
                       <td key={q.id} className="text-center text-xs text-slate-300">
-                        {q.paymentTerms}
+                        Standard Net 30
                       </td>
                     ))}
                   </tr>
@@ -296,8 +334,8 @@ const Comparison = () => {
                   <tr>
                     <td className="font-semibold text-slate-400">Warranty Coverage / Notes</td>
                     {currentQuotations.map((q) => (
-                      <td key={q.id} className="text-center text-xs text-slate-400 max-w-[200px] truncate" title={q.warrantyNotes}>
-                        {q.warrantyNotes}
+                      <td key={q.id} className="text-center text-xs text-slate-400 max-w-[200px] truncate" title={q.remarks}>
+                        {q.remarks || 'No notes'}
                       </td>
                     ))}
                   </tr>

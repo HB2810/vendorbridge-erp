@@ -1,6 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useContext, useEffect } from 'react';
-import { initialVendors, initialRFQs, initialQuotations, initialApprovals, initialInvoices } from '../data/mockData';
 import api from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -25,10 +24,6 @@ const normalizeVendor = (apiVendor) => ({
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const [vendors, setVendors] = useState([]);
-  const [rfqs, setRfqs] = useState(initialRFQs);
-  const [quotations, setQuotations] = useState(initialQuotations);
-  const [approvals, setApprovals] = useState(initialApprovals);
-  const [invoices, setInvoices] = useState(initialInvoices);
 
   const fetchVendors = async () => {
     if (!user) return;
@@ -99,91 +94,6 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // RFQ handlers
-  const addRFQ = (rfq) => {
-    const newRfq = {
-      ...rfq,
-      id: `RFQ-2024-00${rfqs.length + 1}`,
-      date: new Date().toISOString().split('T')[0],
-      status: rfq.status || 'Draft'
-    };
-    setRfqs(prev => [newRfq, ...prev]);
-    return newRfq;
-  };
-
-  const updateRFQ = (updated) => {
-    setRfqs(prev => prev.map(r => r.id === updated.id ? updated : r));
-  };
-
-  // Quotation handlers
-  const addQuotation = (quotation) => {
-    const newQuotation = {
-      ...quotation,
-      id: `QT-2024-00${quotations.length + 1}`,
-      submissionDate: new Date().toISOString().split('T')[0]
-    };
-    setQuotations(prev => [newQuotation, ...prev]);
-    return newQuotation;
-  };
-
-  const updateQuotationStatus = (id, status) => {
-    setQuotations(prev => prev.map(q => q.id === id ? { ...q, status } : q));
-  };
-
-  // Approval handlers
-  const addApproval = (approval) => {
-    const newApproval = {
-      ...approval,
-      id: `APP-2024-00${approvals.length + 1}`,
-      date: new Date().toISOString().split('T')[0],
-      status: approval.status || 'Pending',
-      timeline: approval.timeline || [
-        {
-          timestamp: new Date().toLocaleString(),
-          actor: approval.requestedBy || 'Procurement System',
-          state: 'Created',
-          comments: approval.remarks || 'Initiated approval process.'
-        }
-      ]
-    };
-    setApprovals(prev => [newApproval, ...prev]);
-    return newApproval;
-  };
-
-  const updateApproval = (id, status, remarks, actorName) => {
-    setApprovals(prev => prev.map(app => {
-      if (app.id === id) {
-        const timestamp = new Date().toLocaleString();
-        return {
-          ...app,
-          status,
-          remarks: remarks || app.remarks,
-          timeline: [
-            ...app.timeline,
-            {
-              timestamp,
-              actor: actorName,
-              state: status,
-              comments: remarks || `${status} the approval request.`
-            }
-          ]
-        };
-      }
-      return app;
-    }));
-  };
-
-  // Invoice handlers
-  const addInvoice = (invoice) => {
-    const newInvoice = {
-      ...invoice,
-      invoiceNumber: invoice.invoiceNumber || `INV-2024-00${invoices.length + 1}`,
-      poNumber: invoice.poNumber || `PO-2024-00${invoices.length + 50}`
-    };
-    setInvoices(prev => [newInvoice, ...prev]);
-    return newInvoice;
-  };
-
   const deleteVendor = async (id) => {
     try {
       await api.delete(`/api/vendors/${id}`);
@@ -197,20 +107,9 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       vendors,
-      rfqs,
-      quotations,
-      approvals,
-      invoices,
       addVendor,
       updateVendor,
-      deleteVendor,
-      addRFQ,
-      updateRFQ,
-      addQuotation,
-      updateQuotationStatus,
-      addApproval,
-      updateApproval,
-      addInvoice
+      deleteVendor
     }}>
       {children}
     </AppContext.Provider>

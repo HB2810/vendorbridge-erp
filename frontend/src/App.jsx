@@ -9,6 +9,7 @@ import Topbar from './components/Layout/Topbar';
 
 // Pages
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
 import RFQ from './pages/RFQ';
@@ -50,6 +51,7 @@ const AppRoutes = () => {
     <Routes>
       {/* Public Route */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
       {/* Protected Routes */}
       <Route path="/dashboard" element={

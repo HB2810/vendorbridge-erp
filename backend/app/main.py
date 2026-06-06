@@ -23,6 +23,7 @@ from app.routes.auth import router as auth_router
 from app.routes.vendor import router as vendor_router
 from app.routes.rfq import router as rfq_router
 from app.routes.quotation import router as quotation_router, absolute_router as quotation_absolute_router
+from app.routes.comparison import router as comparison_router
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -80,6 +81,7 @@ app.include_router(vendor_router, prefix="/api/vendors", tags=["Vendors"])
 app.include_router(rfq_router, prefix="/api/rfqs", tags=["RFQs"])
 app.include_router(quotation_router, prefix="/api/quotations", tags=["Quotations"])
 app.include_router(quotation_absolute_router, tags=["Quotations"])
+app.include_router(comparison_router, prefix="/api/comparison", tags=["Comparison"])
 
 
 # ── Root endpoint ────────────────────────────────────────────────

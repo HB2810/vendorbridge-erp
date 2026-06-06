@@ -4,7 +4,7 @@ Comparison service layer implementing validation, scoring algorithms, and vendor
 
 from decimal import Decimal
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.rfq import RFQ
 from app.models.quotation import Quotation
@@ -24,6 +24,7 @@ def get_submitted_quotations(db: Session, rfq_id: int) -> list[Quotation]:
     # Query only submitted quotations
     quotations = (
         db.query(Quotation)
+        .options(joinedload(Quotation.vendor))
         .filter(Quotation.rfq_id == rfq_id, Quotation.status == QuotationStatus.SUBMITTED)
         .all()
     )

@@ -17,6 +17,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.exceptions import register_exception_handlers
 from app.database.database import Base, engine
 from app import models  # noqa: F401
 from app.routes.auth import router as auth_router
@@ -68,6 +69,9 @@ app = FastAPI(
     redoc_url="/redoc",     # ReDoc alternative
     openapi_url="/openapi.json",
 )
+
+# Centralized Exception Handling
+register_exception_handlers(app)
 
 # ── CORS (permissive for local dev; tighten for production) ──────
 app.add_middleware(

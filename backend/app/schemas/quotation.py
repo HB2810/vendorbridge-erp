@@ -19,6 +19,19 @@ class QuotationCreate(BaseModel):
     remarks: str | None = Field(None, description="Optional remarks or notes")
     status: QuotationStatus = Field(default=QuotationStatus.SUBMITTED)
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "rfq_id": 1,
+                "subtotal": 12500.00,
+                "tax_percent": 18.00,
+                "delivery_days": 7,
+                "remarks": "Acme discount rate applied",
+                "status": "SUBMITTED"
+            }
+        }
+    }
+
 
 class QuotationUpdate(BaseModel):
     subtotal: Decimal | None = Field(None, gt=Decimal("0.00"))

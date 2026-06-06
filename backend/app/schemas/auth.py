@@ -19,10 +19,30 @@ class UserSignup(BaseModel):
     )
     role: UserRole = Field(default=UserRole.VENDOR)
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "name": "Jane Doe",
+                "email": "jane@example.com",
+                "password": "password123",
+                "role": "VENDOR",
+            }
+        }
+    }
+
 
 class UserLogin(BaseModel):
     email: str = Field(..., pattern=EMAIL_PATTERN)
     password: str = Field(...)
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "email": "jane@example.com",
+                "password": "password123",
+            }
+        }
+    }
 
 
 class Token(BaseModel):

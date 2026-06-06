@@ -4,7 +4,7 @@ RFQ service layer implementing CRUD operations, validation logic, and vendor ass
 
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.rfq import RFQ
 from app.models.rfq_item import RFQItem
@@ -23,7 +23,7 @@ def get_rfqs(
     size: int = 20,
 ) -> tuple[list[RFQ], int]:
     """Retrieve RFQs with optional search, filtering, and pagination."""
-    query = db.query(RFQ)
+    query = db.query(RFQ).options(joinedload(RFQ.items))
 
     if search:
         query = query.filter(
@@ -47,7 +47,7 @@ def get_rfqs(
 
 def get_rfq_by_id(db: Session, rfq_id: int) -> RFQ | None:
     """Retrieve an RFQ by ID."""
-    return db.query(RFQ).filter(RFQ.id == rfq_id).first()
+    return db.query(RFQ).options(joinedload(RFQ.items)).filter(RFQ.id == rfq_id).first()
 
 
 def create_rfq(db: Session, data: RFQCreate, created_by_id: int) -> RFQ:

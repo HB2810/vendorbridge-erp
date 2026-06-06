@@ -27,6 +27,23 @@ class VendorCreate(BaseModel):
         None, ge=Decimal("0.00"), le=Decimal("5.00"), description="Rating out of 5"
     )
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "vendor_code": "VND-ACME",
+                "company_name": "Acme Industrial Corp",
+                "category": "Manufacturing",
+                "gst_number": "27AAAAA1111A1Z1",
+                "contact_person": "John Doe",
+                "email": "vendor@acme.com",
+                "phone": "+919876543210",
+                "address": "123 Industrial Estate, Mumbai",
+                "status": "ACTIVE",
+                "rating": 4.5,
+            }
+        }
+    }
+
     @field_validator("gst_number")
     @classmethod
     def validate_gst(cls, v: str | None) -> str | None:

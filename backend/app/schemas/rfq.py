@@ -40,6 +40,33 @@ class RFQCreate(BaseModel):
     )
     status: RFQStatus = Field(default=RFQStatus.DRAFT)
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "rfq_number": "RFQ-2026-0005",
+                "title": "Office Computers Upgrade",
+                "description": "Procuring new developer laptops and monitors",
+                "category": "IT Hardware",
+                "deadline": "2026-12-31T23:59:59Z",
+                "items": [
+                    {
+                        "item_name": "Developer Laptops",
+                        "description": "MacBook Pro 16-inch, 32GB RAM",
+                        "quantity": 10,
+                        "unit": "pcs"
+                    },
+                    {
+                        "item_name": "4K Monitors",
+                        "description": "Dell 27-inch 4K Monitor",
+                        "quantity": 15,
+                        "unit": "pcs"
+                    }
+                ],
+                "status": "DRAFT"
+            }
+        }
+    }
+
     @field_validator("deadline")
     @classmethod
     def validate_deadline(cls, v: datetime) -> datetime:

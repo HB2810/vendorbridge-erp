@@ -1,21 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../services/api';
 import { 
   CheckCircle, XCircle, ArrowRight, Clock, 
   MessageSquare, Calendar, History, AlertCircle 
 } from 'lucide-react';
 
 const Approvals = () => {
-  const { approvals, updateApproval } = useApp();
+  const { vendors } = useApp();
   const { user } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
+  const [approvals, setApprovals] = useState([]);
+  const [rfqs, setRfqs] = useState({});
+  const [quotations, setQuotations] = useState({});
+  const [loading, setLoading] = useState(true);
+
   // Active card selected for the right-hand audit timeline sidebar
-  const [activeApprovalId, setActiveApprovalId] = useState(approvals[0]?.id || null);
+  const [activeApprovalId, setActiveApprovalId] = useState(null);
 
   // Modal states
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
@@ -23,45 +29,127 @@ const Approvals = () => {
   const [targetApproval, setTargetApproval] = useState(null);
   const [remarksText, setRemarksText] = useState('');
 
-  const activeApproval = approvals.find(a => a.id === activeApprovalId) || approvals[0];
+  const fetchApprovalsData = async () => {
+    try {
+      setLoading(true);
+      const [appRes, rfqRes, quotRes] = await Promise.all([
+        api.get('/api/approvals'),
+        api.get('/api/rfqs?size=100'),
+        api.get('/api/quotations?size=100')
+      ]);
+      
+      const rfqMap = {};
+      rfqRes.data.items.forEach(r => rfqMap[r.id] = r);
+      setRfqs(rfqMap);
+
+      const quotMap = {};
+      quotRes.data.items.forEach(q => quotMap[q.id] = q);
+      setQuotations(quotMap);
+
+      setApprovals(appRes.data);
+      if (appRes.data.length > 0 && !activeApprovalId) {
+        setActiveApprovalId(appRes.data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load approvals:', err);
+      addToast('Failed to load approvals', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) fetchApprovalsData();
+  }, [user]);
+
+  const mapApprovalData = (app) => {
+    const q = quotations[app.quotation_id];
+    const r = q ? rfqs[q.rfq_id] : null;
+    const v = q ? vendors.find(v => v.id === q.vendor_id) : null;
+    
+    return {
+      id: app.id,
+      quotation_id: app.quotation_id,
+      poReference: `REQ-${app.quotation_id}`, // Before PO is generated
+      vendorName: v ? v.name : `Vendor #${q?.vendor_id}`,
+      vendorId: q?.vendor_id,
+      date: app.created_at ? app.created_at.split('T')[0] : '',
+      rfqTitle: r ? r.title : 'Procurement Sourcing',
+      requestedBy: `User #${r?.created_by || 'System'}`,
+      amount: q ? parseFloat(q.grand_total) : 0,
+      status: app.status === 'APPROVED' ? 'Approved' : app.status === 'REJECTED' ? 'Rejected' : 'Pending',
+      remarks: app.remarks,
+      timeline: [
+        { state: 'Created', timestamp: app.created_at, actor: 'System', comments: 'Approval workflow initiated' },
+        app.approved_at ? { 
+          state: app.status === 'APPROVED' ? 'Approved' : 'Rejected', 
+          timestamp: app.approved_at, 
+          actor: `Manager #${app.approved_by}`, 
+          comments: app.remarks 
+        } : null
+      ].filter(Boolean)
+    };
+  };
+
+  const mappedApprovals = approvals.map(mapApprovalData);
+  const activeApproval = mappedApprovals.find(a => a.id === activeApprovalId) || mappedApprovals[0];
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
-    }).format(val);
+    }).format(val || 0);
   };
 
   const handleOpenDecisionModal = (approval, type, e) => {
-    e.stopPropagation(); // Prevent focusing card change
+    e.stopPropagation();
     setTargetApproval(approval);
     setDecisionType(type);
     setRemarksText('');
     setIsDecisionModalOpen(true);
   };
 
-  const handleConfirmDecision = (e) => {
+  const handleConfirmDecision = async (e) => {
     e.preventDefault();
     if (!targetApproval) return;
 
-    updateApproval(
-      targetApproval.id,
-      decisionType,
-      remarksText || `${decisionType} the PO request contract.`,
-      user?.name || 'System Manager'
-    );
+    try {
+      const endpoint = decisionType === 'Approved' ? 'approve' : 'reject';
+      await api.post(`/api/approvals/${targetApproval.quotation_id}/${endpoint}`, {
+        remarks: remarksText || `${decisionType} the request.`
+      });
 
-    addToast(`Purchase request ${targetApproval.poReference} ${decisionType.toLowerCase()} successfully.`, 'success');
-    setIsDecisionModalOpen(false);
-    
-    // Automatically select the updated card to refresh the timeline
-    setActiveApprovalId(targetApproval.id);
+      addToast(`Purchase request ${decisionType.toLowerCase()} successfully.`, 'success');
+      setIsDecisionModalOpen(false);
+      
+      await fetchApprovalsData();
+      setActiveApprovalId(targetApproval.id);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        addToast('Permission denied: Only Admin or Manager can approve.', 'error');
+      } else {
+        addToast(`Failed to ${decisionType.toLowerCase()} request.`, 'error');
+      }
+    }
   };
 
-  const handleGeneratePO = (approval, e) => {
+  const handleGeneratePO = async (approval, e) => {
     e.stopPropagation();
-    // Redirect to Invoice page with approved PO reference as parameters
-    navigate(`/invoice?poRef=${approval.poReference}&vendorName=${encodeURIComponent(approval.vendorName)}&amount=${approval.amount}`);
+    try {
+      // Create PO
+      const res = await api.post('/api/purchase-orders', {
+        quotation_id: approval.quotation_id
+      });
+      addToast('Purchase order generated successfully!', 'success');
+      // Redirect to Invoice page with generated PO ID
+      navigate(`/invoice?poId=${res.data.id}`);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        addToast('Permission denied: Only Admin or Procurement Officer can generate POs.', 'error');
+      } else {
+        addToast('Failed to generate Purchase Order. Check if one already exists.', 'error');
+      }
+    }
   };
 
   const renderCard = (app) => {
@@ -74,7 +162,6 @@ const Approvals = () => {
           isActive ? 'border-indigo-brand ring-1 ring-indigo-brand' : 'border-slate-800'
         }`}
       >
-        {/* Header */}
         <div className="flex justify-between items-start">
           <div>
             <span className="font-mono text-xs text-indigo-400 font-bold">{app.poReference}</span>
@@ -85,20 +172,17 @@ const Approvals = () => {
           </span>
         </div>
 
-        {/* Info */}
         <div className="text-xs text-slate-400">
           <p className="font-medium text-slate-200 truncate">{app.rfqTitle}</p>
           <span className="text-[10px] text-slate-500 font-mono">Requested: {app.requestedBy}</span>
         </div>
 
-        {/* Amount */}
         <div className="flex justify-between items-center border-t border-slate-800 pt-2">
           <div>
             <span className="text-[9px] font-mono text-slate-500 uppercase">Valuation</span>
             <p className="font-mono font-bold text-white text-sm">{formatCurrency(app.amount)}</p>
           </div>
           
-          {/* Action tags */}
           <div className="flex gap-1">
             {app.status === 'Pending' && (
               <>
@@ -125,7 +209,7 @@ const Approvals = () => {
               </>
             )}
 
-            {app.status === 'Approved' && (
+            {app.status === 'Approved' && (user?.role === 'admin' || user?.role === 'procurement_officer') && (
               <button
                 onClick={(e) => handleGeneratePO(app, e)}
                 className="bg-indigo-950 hover:bg-indigo-900 border border-indigo-800/40 text-indigo-400 font-mono text-[10px] px-2 py-0.5 rounded transition-all flex items-center gap-0.5"
@@ -142,7 +226,6 @@ const Approvals = () => {
           </div>
         </div>
 
-        {/* Remarks preview if present */}
         {app.remarks && (
           <div className="text-[10px] bg-[#0E1527] p-2 border border-slate-850 rounded text-slate-400 flex items-start gap-1 font-mono italic">
             <MessageSquare className="w-3 h-3 text-slate-500 shrink-0 mt-0.5" />
@@ -156,7 +239,6 @@ const Approvals = () => {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
       
-      {/* 3-Column Kanban Board */}
       <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
         
         {/* Column: Pending */}
@@ -166,16 +248,18 @@ const Approvals = () => {
               <Clock className="w-4 h-4 text-amber-warning" /> Pending Approvals
             </span>
             <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-xs font-mono">
-              {approvals.filter(a => a.status === 'Pending').length}
+              {mappedApprovals.filter(a => a.status === 'Pending').length}
             </span>
           </div>
           <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-            {approvals.filter(a => a.status === 'Pending').length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12 text-slate-500 font-mono text-xs">LOADING...</div>
+            ) : mappedApprovals.filter(a => a.status === 'Pending').length === 0 ? (
               <div className="text-center py-12 text-slate-500 font-mono text-xs bg-[#0E1527] border border-slate-850 border-dashed rounded">
                 NO REQUESTS PENDING
               </div>
             ) : (
-              approvals.filter(a => a.status === 'Pending').map(renderCard)
+              mappedApprovals.filter(a => a.status === 'Pending').map(renderCard)
             )}
           </div>
         </div>
@@ -187,16 +271,16 @@ const Approvals = () => {
               <CheckCircle className="w-4 h-4 text-emerald-500" /> Approved
             </span>
             <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-xs font-mono">
-              {approvals.filter(a => a.status === 'Approved').length}
+              {mappedApprovals.filter(a => a.status === 'Approved').length}
             </span>
           </div>
           <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-            {approvals.filter(a => a.status === 'Approved').length === 0 ? (
+            {mappedApprovals.filter(a => a.status === 'Approved').length === 0 ? (
               <div className="text-center py-12 text-slate-500 font-mono text-xs bg-[#0E1527] border border-slate-850 border-dashed rounded">
                 NO APPROVED RECORDS
               </div>
             ) : (
-              approvals.filter(a => a.status === 'Approved').map(renderCard)
+              mappedApprovals.filter(a => a.status === 'Approved').map(renderCard)
             )}
           </div>
         </div>
@@ -208,23 +292,23 @@ const Approvals = () => {
               <XCircle className="w-4 h-4 text-rose-500" /> Rejected
             </span>
             <span className="bg-slate-800 text-slate-400 px-2 py-0.5 rounded text-xs font-mono">
-              {approvals.filter(a => a.status === 'Rejected').length}
+              {mappedApprovals.filter(a => a.status === 'Rejected').length}
             </span>
           </div>
           <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-            {approvals.filter(a => a.status === 'Rejected').length === 0 ? (
+            {mappedApprovals.filter(a => a.status === 'Rejected').length === 0 ? (
               <div className="text-center py-12 text-slate-500 font-mono text-xs bg-[#0E1527] border border-slate-850 border-dashed rounded">
                 NO REJECTED RECORDS
               </div>
             ) : (
-              approvals.filter(a => a.status === 'Rejected').map(renderCard)
+              mappedApprovals.filter(a => a.status === 'Rejected').map(renderCard)
             )}
           </div>
         </div>
 
       </div>
 
-      {/* TIMELINE SIDEBAR PANEL (Right panel) */}
+      {/* TIMELINE SIDEBAR PANEL */}
       <div className="xl:col-span-1 bg-slate-surface border border-slate-700 rounded-lg p-4 flex flex-col justify-between h-fit sticky top-24">
         <div>
           <div className="border-b border-slate-800 pb-2 mb-4 flex items-center gap-1.5">
@@ -235,7 +319,6 @@ const Approvals = () => {
           {activeApproval ? (
             <div className="space-y-4">
               
-              {/* Header meta context */}
               <div className="bg-[#0D1527] border border-slate-850 rounded p-3 text-xs font-mono space-y-1">
                 <p className="text-slate-500 uppercase text-[9px] font-bold">ACTIVE CONTRACT PROFILE</p>
                 <p className="text-indigo-400 font-semibold">{activeApproval.poReference}</p>
@@ -250,14 +333,12 @@ const Approvals = () => {
                 </div>
               </div>
 
-              {/* Vertical timeline */}
               <div>
                 <span className="block text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-3">SLA PROGRESS TRANSITIONS</span>
                 
                 <div className="border-l border-slate-800 pl-4 space-y-5 ml-2">
                   {activeApproval.timeline?.map((step, idx) => (
                     <div key={idx} className="relative">
-                      {/* Node circle indicator */}
                       <div className={`absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full ring-4 ring-[#1E2640] ${
                         step.state === 'Approved' ? 'bg-emerald-500' :
                         step.state === 'Rejected' ? 'bg-rose-500' :
@@ -266,7 +347,7 @@ const Approvals = () => {
                       
                       <div className="text-xs space-y-1 font-sans">
                         <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono">
-                          <span>{step.timestamp}</span>
+                          <span>{step.timestamp.split('T')[0]}</span>
                           <span className="font-bold text-slate-400">{step.actor}</span>
                         </div>
                         <p className="font-semibold text-slate-200">State Transition: {step.state}</p>

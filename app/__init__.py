@@ -1,0 +1,2 @@
+"""VendorBridge backend application package."""
+

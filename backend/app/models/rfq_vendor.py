@@ -5,7 +5,7 @@ RFQ–Vendor Junction model — tracks which vendors are invited to bid on which
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
@@ -29,16 +29,10 @@ class RFQVendor(Base):
     vendor_id: Mapped[int] = mapped_column(
         ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="invited", index=True
-    )
-    invited_at: Mapped[datetime] = mapped_column(
+    assigned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
-    )
-    responded_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
     )
 
     # ── Relationships ─────────────────────────────────────────
@@ -50,4 +44,4 @@ class RFQVendor(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<RFQVendor rfq={self.rfq_id} vendor={self.vendor_id} status={self.status!r}>"
+        return f"<RFQVendor id={self.id} rfq={self.rfq_id} vendor={self.vendor_id}>"

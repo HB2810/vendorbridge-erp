@@ -4,7 +4,7 @@ User model — system users with role-based access.
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
@@ -14,8 +14,6 @@ from app.models.enums import UserRole
 if TYPE_CHECKING:
     from app.models.rfq import RFQ
     from app.models.approval import Approval
-    from app.models.purchase_order import PurchaseOrder
-    from app.models.invoice import Invoice
     from app.models.activity_log import ActivityLog
 
 
@@ -23,30 +21,21 @@ class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
-        default=UserRole.VIEWER, index=True
-    )
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True
+        default=UserRole.VENDOR, index=True
     )
 
     # ── Relationships ─────────────────────────────────────────
-    rfqs: Mapped[list["RFQ"]] = relationship(
+    rfqs_created: Mapped[list["RFQ"]] = relationship(
         back_populates="creator", foreign_keys="RFQ.created_by"
     )
     approvals: Mapped[list["Approval"]] = relationship(
-        back_populates="approver"
-    )
-    issued_purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(
-        back_populates="issuer", foreign_keys="PurchaseOrder.issued_by"
-    )
-    submitted_invoices: Mapped[list["Invoice"]] = relationship(
-        back_populates="submitter", foreign_keys="Invoice.submitted_by"
+        back_populates="approver", foreign_keys="Approval.approved_by"
     )
     activity_logs: Mapped[list["ActivityLog"]] = relationship(
         back_populates="user"

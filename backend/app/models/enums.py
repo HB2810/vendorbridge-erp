@@ -6,51 +6,45 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    BUYER = "buyer"
-    APPROVER = "approver"
-    VIEWER = "viewer"
+    ADMIN = "ADMIN"
+    PROCUREMENT_OFFICER = "PROCUREMENT_OFFICER"
+    MANAGER = "MANAGER"
+    VENDOR = "VENDOR"
 
 
 class VendorStatus(str, Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    BLOCKED = "blocked"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 
 class RFQStatus(str, Enum):
-    DRAFT = "draft"
-    OPEN = "open"
-    UNDER_REVIEW = "under_review"
-    CLOSED = "closed"
-    CANCELLED = "cancelled"
+    DRAFT = "DRAFT"
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
 
 
 class QuotationStatus(str, Enum):
-    PENDING = "pending"
-    SUBMITTED = "submitted"
-    UNDER_REVIEW = "under_review"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
 
 
 class ApprovalStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 class PurchaseOrderStatus(str, Enum):
-    DRAFT = "draft"
-    ISSUED = "issued"
-    ACKNOWLEDGED = "acknowledged"
-    DELIVERED = "delivered"
-    CLOSED = "closed"
-    CANCELLED = "cancelled"
+    DRAFT = "DRAFT"
+    GENERATED = "GENERATED"
+    COMPLETED = "COMPLETED"
 
 
 class InvoiceStatus(str, Enum):
-    DRAFT = "draft"
-    SUBMITTED = "submitted"
-    PAID = "paid"
-    VOID = "void"
+    DRAFT = "DRAFT"
+    GENERATED = "GENERATED"
+    PAID = "PAID"
+    CANCELLED = "CANCELLED"

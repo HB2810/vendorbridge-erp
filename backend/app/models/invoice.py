@@ -15,8 +15,6 @@ from app.models.enums import InvoiceStatus
 
 if TYPE_CHECKING:
     from app.models.purchase_order import PurchaseOrder
-    from app.models.vendor import Vendor
-    from app.models.user import User
 
 
 class Invoice(Base, TimestampMixin):
@@ -27,42 +25,21 @@ class Invoice(Base, TimestampMixin):
         String(50), unique=True, nullable=False, index=True
     )
     purchase_order_id: Mapped[int] = mapped_column(
-        ForeignKey("purchase_orders.id"), nullable=False, index=True
+        ForeignKey("purchase_orders.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    vendor_id: Mapped[int] = mapped_column(
-        ForeignKey("vendors.id"), nullable=False, index=True
-    )
-    amount_due: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), nullable=False
-    )
-    tax_amount: Mapped[Decimal] = mapped_column(
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    tax: Mapped[Decimal] = mapped_column(
         Numeric(14, 2), nullable=False, default=Decimal("0.00")
     )
-    total_amount: Mapped[Decimal] = mapped_column(
-        Numeric(14, 2), nullable=False
-    )
+    grand_total: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    payment_terms: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[InvoiceStatus] = mapped_column(
         default=InvoiceStatus.DRAFT, index=True
-    )
-    issue_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    due_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    paid_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    submitted_by: Mapped[int] = mapped_column(
-        ForeignKey("users.id"), nullable=False, index=True
     )
 
     # ── Relationships ─────────────────────────────────────────
     purchase_order: Mapped["PurchaseOrder"] = relationship(back_populates="invoices")
-    vendor: Mapped["Vendor"] = relationship(back_populates="invoices")
-    submitter: Mapped["User"] = relationship(
-        back_populates="submitted_invoices", foreign_keys=[submitted_by]
-    )
 
     def __repr__(self) -> str:
-        return f"<Invoice id={self.id} number={self.invoice_number!r} status={self.status.value!r} total={self.total_amount}>"
+        return f"<Invoice id={self.id} number={self.invoice_number!r} status={self.status.value!r} total={self.grand_total}>"

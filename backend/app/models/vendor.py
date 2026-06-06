@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from app.models.rfq_vendor import RFQVendor
     from app.models.quotation import Quotation
     from app.models.purchase_order import PurchaseOrder
-    from app.models.invoice import Invoice
 
 
 class Vendor(Base, TimestampMixin):
@@ -27,21 +26,16 @@ class Vendor(Base, TimestampMixin):
         String(50), unique=True, nullable=False, index=True
     )
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, index=True
+    )
+    gst_number: Mapped[str | None] = mapped_column(String(15), nullable=True)
     contact_person: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)
-    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    state: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    country: Mapped[str] = mapped_column(
-        String(100), nullable=False, default="India"
-    )
-    tax_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    category: Mapped[str | None] = mapped_column(
-        String(100), nullable=True, index=True
-    )
     status: Mapped[VendorStatus] = mapped_column(
         default=VendorStatus.ACTIVE, index=True
     )
@@ -57,9 +51,6 @@ class Vendor(Base, TimestampMixin):
         back_populates="vendor", cascade="all, delete-orphan"
     )
     purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(
-        back_populates="vendor", cascade="all, delete-orphan"
-    )
-    invoices: Mapped[list["Invoice"]] = relationship(
         back_populates="vendor", cascade="all, delete-orphan"
     )
 

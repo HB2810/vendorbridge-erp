@@ -28,11 +28,12 @@ class RFQ(Base, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    deadline: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     status: Mapped[RFQStatus] = mapped_column(
         default=RFQStatus.DRAFT, index=True
-    )
-    submission_deadline: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
     )
     created_by: Mapped[int] = mapped_column(
         ForeignKey("users.id"), nullable=False, index=True
@@ -40,7 +41,7 @@ class RFQ(Base, TimestampMixin):
 
     # ── Relationships ─────────────────────────────────────────
     creator: Mapped["User"] = relationship(
-        back_populates="rfqs", foreign_keys=[created_by]
+        back_populates="rfqs_created", foreign_keys=[created_by]
     )
     items: Mapped[list["RFQItem"]] = relationship(
         back_populates="rfq", cascade="all, delete-orphan"

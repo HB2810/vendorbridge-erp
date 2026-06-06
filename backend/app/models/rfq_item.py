@@ -2,17 +2,20 @@
 RFQ Item model — individual line items within a Request for Quotation.
 """
 
-from app.models.rfq import RFQ
-from datetime import datetime, timezone
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
+from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.rfq import RFQ
 
 
-class RFQItem(Base):
+class RFQItem(Base, TimestampMixin):
     __tablename__ = "rfq_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -25,24 +28,9 @@ class RFQItem(Base):
     unit: Mapped[str] = mapped_column(
         String(20), nullable=False, default="pcs"
     )
-    estimated_unit_price: Mapped[Decimal | None] = mapped_column(
-        Numeric(14, 2), nullable=True
-    )
-    specifications: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
 
     # ── Relationships ─────────────────────────────────────────
-    rfq: Mapped["RFQ"] = relationship(  # noqa: F821
-        back_populates="items"
-    )
-    # QuotationItem = None
-    # quotation_items: Mapped[list["QuotationItem"]] = relationship(  # noqa: F821
-    #     back_populates="rfq_item"
-    # )
+    rfq: Mapped["RFQ"] = relationship(back_populates="items")
 
     def __repr__(self) -> str:
         return f"<RFQItem id={self.id} name={self.item_name!r} qty={self.quantity}>"

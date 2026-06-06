@@ -15,8 +15,9 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const response = await api.get('/api/auth/me');
-          setUser(response.data);
-          localStorage.setItem('vendorbridge_user', JSON.stringify(response.data));
+          const userData = { ...response.data, role: response.data.role.toLowerCase() };
+          setUser(userData);
+          localStorage.setItem('vendorbridge_user', JSON.stringify(userData));
         } catch (error) {
           console.error('Session verification failed:', error);
           logout();
@@ -35,8 +36,9 @@ export const AuthProvider = ({ children }) => {
 
       const meResponse = await api.get('/api/auth/me');
       const data = meResponse.data;
-      setUser(data);
-      localStorage.setItem('vendorbridge_user', JSON.stringify(data));
+      const userData = { ...data, role: data.role.toLowerCase() };
+      setUser(userData);
+      localStorage.setItem('vendorbridge_user', JSON.stringify(userData));
       return true;
     } catch (error) {
       console.error('Login error:', error);

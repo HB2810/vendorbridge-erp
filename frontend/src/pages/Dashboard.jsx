@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../services/api';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -17,13 +19,38 @@ const Dashboard = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Dynamic values
-  const totalVendors = vendors.length;
-  const activeRFQs = rfqs.filter(r => r.status === 'Sent').length;
-  const pendingApprovalsCount = approvals.filter(a => a.status === 'Pending').length;
-  const totalPOValue = approvals
-    .filter(a => a.status === 'Approved')
-    .reduce((sum, item) => sum + item.amount, 0);
+  const [stats, setStats] = useState({
+    total_vendors: 0,
+    active_vendors: 0,
+    active_rfqs: 0,
+    pending_approvals: 0,
+    total_purchase_orders: 0,
+    total_invoices: 0,
+    total_procurement_value: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user && user.role !== 'vendor') {
+        try {
+          const response = await api.get('/api/dashboard/stats');
+          setStats(response.data);
+        } catch (error) {
+          console.error('Failed to fetch dashboard stats:', error);
+          addToast('Failed to load dashboard metrics from server.', 'error');
+        }
+      }
+      setLoadingStats(false);
+    };
+    fetchStats();
+  }, [user]);
+
+  // Dynamic values mapped from API response
+  const totalVendors = user?.role === 'vendor' ? vendors.length : stats.total_vendors;
+  const activeRFQs = user?.role === 'vendor' ? rfqs.length : stats.active_rfqs;
+  const pendingApprovalsCount = user?.role === 'vendor' ? 0 : stats.pending_approvals;
+  const totalPOValue = user?.role === 'vendor' ? 0 : stats.total_procurement_value;
 
   // Render monetary fields
   const formatCurrency = (val) => {

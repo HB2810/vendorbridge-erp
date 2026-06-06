@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -14,38 +14,11 @@ const Login = () => {
   const [selectedRole, setSelectedRole] = useState('admin');
   const [error, setError] = useState('');
 
-  // Default pre-fill values based on role for easy testing/demo
+  // Handle role changes manually without pre-filling credentials
   const handleRoleChange = (role) => {
     setSelectedRole(role);
     setError('');
-    switch (role) {
-      case 'admin':
-        setEmail('admin@vendorbridge.com');
-        setPassword('password');
-        break;
-      case 'procurement_officer':
-        setEmail('s.jenkins@vendorbridge.com');
-        setPassword('password');
-        break;
-      case 'vendor':
-        setEmail('supplier@optimapower.com');
-        setPassword('password');
-        break;
-      case 'manager':
-        setEmail('m.vance@vendorbridge.com');
-        setPassword('password');
-        break;
-      default:
-        break;
-    }
   };
-
-  // Initialize values
-  React.useEffect(() => {
-    setTimeout(() => {
-      handleRoleChange('admin');
-    }, 0);
-  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();

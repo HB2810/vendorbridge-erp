@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -11,8 +11,7 @@ import {
   Receipt, 
   LogOut,
   ChevronLeft,
-  ChevronRight,
-  Menu
+  ChevronRight
 } from 'lucide-react';
 
 const Sidebar = () => {

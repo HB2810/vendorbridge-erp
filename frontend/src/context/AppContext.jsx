@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useContext } from 'react';
 import { initialVendors, initialRFQs, initialQuotations, initialApprovals, initialInvoices } from '../data/mockData';
 
 const AppContext = createContext(null);

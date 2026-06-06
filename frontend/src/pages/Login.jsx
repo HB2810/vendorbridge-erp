@@ -42,7 +42,9 @@ const Login = () => {
 
   // Initialize values
   React.useEffect(() => {
-    handleRoleChange('admin');
+    setTimeout(() => {
+      handleRoleChange('admin');
+    }, 0);
   }, []);
 
   const handleSubmit = (e) => {

@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -9,7 +10,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedUser = localStorage.getItem('vendorbridge_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      setTimeout(() => {
+        setUser(JSON.parse(savedUser));
+      }, 0);
     }
   }, []);
 

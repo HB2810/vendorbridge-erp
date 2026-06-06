@@ -6,12 +6,12 @@
 
 @layer base {
   body {
-    @apply bg-navy-dark text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-indigo-brand selection:text-white;
+    @apply bg-navy-dark text-slate-900 font-sans antialiased overflow-x-hidden selection:bg-indigo-brand selection:text-white;
   }
 
   /* Dense industrial inputs and tables */
   input, select, textarea {
-    @apply bg-[#0D1527] border border-slate-700 text-slate-100 px-3 py-1.5 focus:outline-none focus:border-indigo-brand transition-colors font-sans text-sm rounded-md placeholder-slate-500;
+    @apply bg-white border border-slate-300 text-slate-900 px-3 py-1.5 focus:outline-none focus:border-indigo-brand transition-colors font-sans text-sm rounded-md placeholder-slate-400;
   }
 
   table {
@@ -19,15 +19,15 @@
   }
 
   th {
-    @apply border-b border-slate-700 bg-[#11182D] text-slate-400 font-medium px-4 py-2 text-xs uppercase tracking-wider font-sans;
+    @apply border-b border-slate-300 bg-slate-100 text-slate-700 font-semibold px-4 py-2 text-xs uppercase tracking-wider font-sans;
   }
 
   td {
-    @apply border-b border-slate-800 px-4 py-2.5 text-slate-300 font-sans;
+    @apply border-b border-slate-200 px-4 py-2.5 text-slate-800 font-sans;
   }
 
   tr:hover td {
-    @apply bg-[#151C33] text-white;
+    @apply bg-blue-50 text-slate-900;
   }
 }
 
@@ -37,14 +37,14 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0A0F1E;
+  background: #F0F4F8;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1E2640;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4F465E;
+  background: #94A3B8;
 }
 
 /* Financial Grade font for codes and amounts */
@@ -56,15 +56,15 @@
 
 /* Custom status badges */
 .badge-status {
-  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium border uppercase tracking-wider;
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium border uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200;
 }
 
-/* Subtle mesh gradient for login */
+/* Subtle mesh gradient for login (redefined for blue/white) */
 .login-mesh {
-  background-color: #0A0F1E;
+  background-color: #F0F4F8;
   background-image: 
-    radial-gradient(at 0% 0%, hsla(242, 78%, 20%, 0.5) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, hsla(242, 78%, 15%, 0.5) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(220, 100%, 90%, 0.8) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(220, 100%, 85%, 0.6) 0px, transparent 50%);
 }
 
 /* Print utility */
@@ -89,4 +89,185 @@
   .no-print {
     display: none !important;
   }
+}
+
+/* GLOBAL GLOBAL LIGHT BLUE-WHITE THEME OVERRIDES */
+
+/* Map dark backgrounds to white & light blue */
+.bg-navy-dark,
+[class*="bg-navy-dark"] {
+  background-color: #F0F4F8 !important;
+}
+
+.bg-navy-light,
+[class*="bg-navy-light"] {
+  background-color: #F8FAFC !important;
+}
+
+.bg-slate-surface,
+[class*="bg-slate-surface"],
+.bg-slate-800 {
+  background-color: #FFFFFF !important;
+}
+
+/* Overriding hardcoded background utilities in files */
+[class*="bg-[#0E1527]"],
+[class*="bg-[#121A30]"],
+[class*="bg-[#0D1527]"],
+[class*="bg-[#0B1123]"],
+[class*="bg-[#151C33]"],
+[class*="bg-[#1E2640]"],
+[class*="bg-[#0E1527]/80"],
+[class*="bg-[#121A30]/80"],
+[class*="bg-[#121A30]/50"] {
+  background-color: #FFFFFF !important;
+}
+
+[class*="bg-[#0A0F1E]"] {
+  background-color: #F0F4F8 !important;
+}
+
+/* Left Sidebar Overrides (Clean Royal Blue & White) */
+aside {
+  background-color: #1E3A8A !important; /* Royal Navy Blue Sidebar */
+  border-right-color: #1E3A8A !important;
+}
+
+aside a {
+  color: #BFDBFE !important;
+  border-left-color: transparent !important;
+}
+
+aside a:hover {
+  background-color: #1E40AF !important;
+  color: #FFFFFF !important;
+}
+
+aside a.active,
+[class*="bg-[#1E2640]"].border-l-4 {
+  background-color: #1D4ED8 !important; /* Deep active blue */
+  color: #FFFFFF !important;
+  border-left-color: #3B82F6 !important; /* Light blue accent border */
+}
+
+aside div {
+  color: #FFFFFF !important;
+}
+
+aside p {
+  color: #E2E8F0 !important;
+}
+
+aside button {
+  border-color: #3B82F6 !important;
+  color: #E2E8F0 !important;
+}
+
+aside button:hover {
+  background-color: #EF4444 !important;
+  color: #FFFFFF !important;
+}
+
+/* Topbar override */
+header {
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+header h1 {
+  color: #1E3A8A !important;
+}
+
+header button {
+  color: #475569 !important;
+}
+
+header button:hover {
+  background-color: #F1F5F9 !important;
+}
+
+/* Global Border overrides */
+[class*="border-slate-700"],
+[class*="border-slate-800"],
+[class*="border-slate-850"],
+[class*="border-slate-900"],
+.border-slate-700,
+.border-slate-800,
+.border-slate-850,
+.border-slate-900,
+.border-t,
+.border-b,
+.border-l,
+.border-r,
+.border,
+hr {
+  border-color: #E2E8F0 !important;
+}
+
+/* Global Text color corrections for light theme readability */
+.text-slate-100,
+.text-slate-200,
+.text-slate-300,
+.text-slate-400,
+.text-white {
+  color: #1E293B !important;
+}
+
+.text-slate-500,
+.text-gray-secondary {
+  color: #64748B !important;
+}
+
+/* Accent values */
+.text-indigo-400 {
+  color: #2563EB !important; /* Map to clear blue */
+}
+
+.text-indigo-400:hover {
+  color: #1D4ED8 !important;
+}
+
+/* Badge status maps */
+.bg-indigo-950\/40,
+.bg-indigo-950\/50,
+.bg-indigo-950 {
+  background-color: #EFF6FF !important;
+}
+
+.bg-emerald-950\/40,
+.bg-emerald-950 {
+  background-color: #ECFDF5 !important;
+}
+
+.bg-rose-950\/40,
+.bg-rose-950 {
+  background-color: #FEF2F2 !important;
+}
+
+.bg-amber-950\/40,
+.bg-amber-950 {
+  background-color: #FFFBEB !important;
+}
+
+/* Modal Inner Background Corrections */
+.fixed.inset-0.z-50 > div,
+.fixed.inset-0.z-50 > div > form,
+.fixed.inset-0.z-50 > div > div {
+  background-color: #FFFFFF !important;
+  color: #1E293B !important;
+  border-color: #E2E8F0 !important;
+}
+
+/* Select specific inputs style */
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #1E293B !important;
+}
+
+/* Custom badges */
+.badge-status {
+  background-color: #EFF6FF !important;
+  color: #2563EB !important;
+  border-color: #BFDBFE !important;
 }

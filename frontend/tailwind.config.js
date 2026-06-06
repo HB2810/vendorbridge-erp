@@ -8,22 +8,22 @@ export default {
     extend: {
       colors: {
         navy: {
-          DEFAULT: '#0A0F1E',
-          dark: '#0A0F1E',
-          light: '#11182D',
+          DEFAULT: '#F0F4F8', // Very light slate-blue
+          dark: '#F0F4F8',
+          light: '#E2E8F0',  // Soft gray-blue
         },
         slate: {
-          surface: '#1E2640',
-          border: '#334155', // Tailwind slate-700 is #334155
+          surface: '#FFFFFF', // Clean white
+          border: '#CBD5E1',  // Slate-300 light border
         },
         indigo: {
-          brand: '#4F46E5',
+          brand: '#2563EB',   // Royal blue
         },
         gray: {
-          secondary: '#94A3B8',
+          secondary: '#475569', // Slate-600
         },
         amber: {
-          warning: '#F59E0B',
+          warning: '#D97706',   // Amber-600
         }
       },
       fontFamily: {

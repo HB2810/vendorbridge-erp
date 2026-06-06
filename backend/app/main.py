@@ -28,6 +28,7 @@ from app.routes.comparison import router as comparison_router
 from app.routes.approval import router as approval_router
 from app.routes.purchase_order import router as purchase_order_router
 from app.routes.invoice import router as invoice_router
+from app.routes.dashboard import router as dashboard_router
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -92,6 +93,7 @@ app.include_router(comparison_router, prefix="/api/comparison", tags=["Compariso
 app.include_router(approval_router, prefix="/api/approvals", tags=["Approvals"])
 app.include_router(purchase_order_router, prefix="/api/purchase-orders", tags=["Purchase Orders"])
 app.include_router(invoice_router, prefix="/api/invoices", tags=["Invoices"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["Dashboard"])
 
 
 # ── Root endpoint ────────────────────────────────────────────────

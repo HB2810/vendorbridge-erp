@@ -65,7 +65,7 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div>
             <label className="block text-xs font-mono font-medium text-slate-400 uppercase mb-1.5">Security Email Address</label>
             <div className="relative">
@@ -74,7 +74,8 @@ const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
+                placeholder="Enter email address"
+                autoComplete="off"
                 className="w-full pl-9 pr-4 py-2"
               />
             </div>
@@ -88,7 +89,8 @@ const Login = () => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter password"
+                autoComplete="current-password"
                 className="w-full pl-9 pr-4 py-2"
               />
             </div>

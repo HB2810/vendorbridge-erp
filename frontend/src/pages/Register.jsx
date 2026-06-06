@@ -95,7 +95,7 @@ const Register = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -106,7 +106,8 @@ const Register = () => {
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="Apex Industrial Solutions"
+                  placeholder="Enter company name"
+                  autoComplete="off"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>
@@ -120,7 +121,8 @@ const Register = () => {
                   type="text"
                   value={gstNumber}
                   onChange={(e) => setGstNumber(e.target.value)}
-                  placeholder="27AAPCA1234F1Z0"
+                  placeholder="Enter GST number"
+                  autoComplete="off"
                   className="w-full pl-9 pr-4 py-2 font-mono"
                 />
               </div>
@@ -148,7 +150,8 @@ const Register = () => {
                   type="text"
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
-                  placeholder="John Doe"
+                  placeholder="Enter contact name"
+                  autoComplete="off"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>
@@ -162,7 +165,8 @@ const Register = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="sourcing@company.com"
+                  placeholder="Enter email address"
+                  autoComplete="off"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>
@@ -176,7 +180,8 @@ const Register = () => {
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="Enter phone number"
+                  autoComplete="off"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>
@@ -190,7 +195,8 @@ const Register = () => {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter password"
+                  autoComplete="new-password"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>
@@ -204,7 +210,8 @@ const Register = () => {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Confirm password"
+                  autoComplete="new-password"
                   className="w-full pl-9 pr-4 py-2"
                 />
               </div>

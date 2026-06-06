@@ -60,8 +60,12 @@ def create_rfq(db: Session, data: RFQCreate, created_by_id: int) -> RFQ:
         )
 
     # Validate deadline is in the future
-    now = datetime.now(data.deadline.tzinfo or timezone.utc)
-    if data.deadline <= now:
+    deadline = data.deadline
+    if deadline.tzinfo is None:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+    else:
+        now = datetime.now(timezone.utc)
+    if deadline <= now:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="RFQ deadline must be in the future.",
@@ -123,7 +127,10 @@ def update_rfq(db: Session, rfq_id: int, data: RFQUpdate) -> RFQ | None:
     # Check deadline if updated
     new_deadline = update_fields.get("deadline")
     if new_deadline:
-        now = datetime.now(new_deadline.tzinfo or timezone.utc)
+        if new_deadline.tzinfo is None:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+        else:
+            now = datetime.now(timezone.utc)
         if new_deadline <= now:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

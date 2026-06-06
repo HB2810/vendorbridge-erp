@@ -1,8 +1,15 @@
 """
-Status Enum definitions for the VendorBridge ERP database models.
+Status and Role Enum definitions for the VendorBridge ERP database models.
 """
 
 from enum import Enum
+
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    BUYER = "buyer"
+    APPROVER = "approver"
+    VIEWER = "viewer"
 
 
 class VendorStatus(str, Enum):

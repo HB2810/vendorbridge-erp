@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 from app.models.base import TimestampMixin
+from app.models.enums import UserRole
 
 if TYPE_CHECKING:
     from app.models.rfq import RFQ
@@ -27,8 +28,8 @@ class User(Base, TimestampMixin):
     )
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
-    role: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="viewer", index=True
+    role: Mapped[UserRole] = mapped_column(
+        default=UserRole.VIEWER, index=True
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
@@ -52,4 +53,4 @@ class User(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<User id={self.id} email={self.email!r} role={self.role!r}>"
+        return f"<User id={self.id} email={self.email!r} role={self.role.value!r}>"

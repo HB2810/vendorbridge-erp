@@ -13,6 +13,7 @@ from app.models.purchase_order import PurchaseOrder
 from app.models.invoice import Invoice
 from app.models.activity_log import ActivityLog
 from app.models.enums import (
+    UserRole,
     VendorStatus,
     RFQStatus,
     QuotationStatus,
@@ -32,6 +33,7 @@ __all__ = [
     "PurchaseOrder",
     "Invoice",
     "ActivityLog",
+    "UserRole",
     "VendorStatus",
     "RFQStatus",
     "QuotationStatus",

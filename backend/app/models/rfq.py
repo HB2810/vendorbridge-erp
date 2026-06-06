@@ -4,12 +4,19 @@ RFQ (Request for Quotation) model — procurement event header.
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.rfq_item import RFQItem
+    from app.models.rfq_vendor_assignment import RFQVendorAssignment
+
 
 
 class RFQ(Base, TimestampMixin):

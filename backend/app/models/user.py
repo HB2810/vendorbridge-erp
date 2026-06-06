@@ -2,6 +2,7 @@
 User model — system users with role-based access.
 """
 
+from app.models import RFQ
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

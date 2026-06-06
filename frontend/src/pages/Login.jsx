@@ -20,7 +20,7 @@ const Login = () => {
     setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -30,12 +30,17 @@ const Login = () => {
       return;
     }
 
-    const success = login(email, selectedRole);
-    if (success) {
-      addToast(`Successfully authenticated as ${selectedRole.replace('_', ' ').toUpperCase()}`, 'success');
-      navigate('/dashboard');
-    } else {
-      setError('Authentication failed. Check your inputs.');
+    try {
+      const success = await login(email, password);
+      if (success) {
+        addToast('Successfully authenticated', 'success');
+        navigate('/dashboard');
+      } else {
+        setError('Authentication failed. Check your inputs.');
+        addToast('Login Failed: Invalid credentials.', 'error');
+      }
+    } catch (err) {
+      setError(err.message || 'Authentication failed. Check your inputs.');
       addToast('Login Failed: Invalid credentials.', 'error');
     }
   };

@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-navy-dark text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-indigo-brand selection:text-white;
+  }
+
+  /* Dense industrial inputs and tables */
+  input, select, textarea {
+    @apply bg-[#0D1527] border border-slate-700 text-slate-100 px-3 py-1.5 focus:outline-none focus:border-indigo-brand transition-colors font-sans text-sm rounded-md placeholder-slate-500;
+  }
+
+  table {
+    @apply border-collapse w-full text-left text-sm font-sans;
+  }
+
+  th {
+    @apply border-b border-slate-700 bg-[#11182D] text-slate-400 font-medium px-4 py-2 text-xs uppercase tracking-wider font-sans;
+  }
+
+  td {
+    @apply border-b border-slate-800 px-4 py-2.5 text-slate-300 font-sans;
+  }
+
+  tr:hover td {
+    @apply bg-[#151C33] text-white;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0F1E;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E2640;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4F465E;
+}
+
+/* Financial Grade font for codes and amounts */
+.financial-number {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+/* Custom status badges */
+.badge-status {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium border uppercase tracking-wider;
+}
+
+/* Subtle mesh gradient for login */
+.login-mesh {
+  background-color: #0A0F1E;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(242, 78%, 20%, 0.5) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(242, 78%, 15%, 0.5) 0px, transparent 50%);
+}
+
+/* Print utility */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area, .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

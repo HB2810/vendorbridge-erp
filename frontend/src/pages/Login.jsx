@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { Shield, Key, Mail } from 'lucide-react';
+import { Key, Mail } from 'lucide-react';
 
 const Login = () => {
   const { login } = useAuth();
@@ -70,9 +70,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center login-mesh relative px-4">
       {/* Decorative Matrix Lines */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0F172A_1px,transparent_1px),linear-gradient(to_bottom,#0F172A_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(37,99,235,0.08)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80"></div>
       
-      <div className="w-full max-w-md bg-[#121A30]/80 border border-slate-700/80 rounded-lg shadow-[0_0_50px_rgba(79,70,229,0.15)] backdrop-blur-md p-8 relative z-10">
+      <div className="w-full max-w-md bg-white/90 border border-slate-200 rounded-lg shadow-[0_0_40px_rgba(37,99,235,0.06)] backdrop-blur-md p-8 relative z-10">
         
         {/* Logo and Branding */}
         <div className="text-center mb-8">
@@ -159,6 +159,15 @@ const Login = () => {
             Authenticate Portal
           </button>
         </form>
+
+        <div className="mt-4 text-center">
+          <p className="text-xs text-slate-500 font-sans">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold underline">
+              Register Profile
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ from app.core.config import get_settings
 from app.database.database import Base, engine
 from app import models  # noqa: F401
 from app.routes.auth import router as auth_router
+from app.routes.vendor import router as vendor_router
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -73,6 +74,7 @@ app.add_middleware(
 
 # ── Routers ──────────────────────────────────────────────────────
 app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(vendor_router, prefix="/api/vendors", tags=["Vendors"])
 
 
 # ── Root endpoint ────────────────────────────────────────────────

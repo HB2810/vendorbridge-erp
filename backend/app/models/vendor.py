@@ -10,16 +10,22 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 from app.models.base import TimestampMixin
+from app.models.enums import VendorStatus
 
 if TYPE_CHECKING:
-    from app.models.rfq_vendor_assignment import RFQVendorAssignment
-
+    from app.models.rfq_vendor import RFQVendor
+    from app.models.quotation import Quotation
+    from app.models.purchase_order import PurchaseOrder
+    from app.models.invoice import Invoice
 
 
 class Vendor(Base, TimestampMixin):
     __tablename__ = "vendors"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    vendor_code: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_person: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str] = mapped_column(
@@ -36,26 +42,26 @@ class Vendor(Base, TimestampMixin):
     category: Mapped[str | None] = mapped_column(
         String(100), nullable=True, index=True
     )
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="active", index=True
+    status: Mapped[VendorStatus] = mapped_column(
+        default=VendorStatus.ACTIVE, index=True
     )
     rating: Mapped[Decimal | None] = mapped_column(
         Numeric(3, 2), nullable=True, default=Decimal("0.00")
     )
 
     # ── Relationships ─────────────────────────────────────────
-    rfq_assignments: Mapped[list["RFQVendorAssignment"]] = relationship(  # noqa: F821
-        back_populates="vendor"
+    rfq_assignments: Mapped[list["RFQVendor"]] = relationship(
+        back_populates="vendor", cascade="all, delete-orphan"
     )
-    # quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
-    #     back_populates="vendor"
-    # )
-    # purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
-    #     back_populates="vendor"
-    # )
-    # invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
-    #     back_populates="vendor"
-    # )
+    quotations: Mapped[list["Quotation"]] = relationship(
+        back_populates="vendor", cascade="all, delete-orphan"
+    )
+    purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(
+        back_populates="vendor", cascade="all, delete-orphan"
+    )
+    invoices: Mapped[list["Invoice"]] = relationship(
+        back_populates="vendor", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
-        return f"<Vendor id={self.id} company={self.company_name!r} status={self.status!r}>"
+        return f"<Vendor id={self.id} code={self.vendor_code!r} company={self.company_name!r} status={self.status.value!r}>"

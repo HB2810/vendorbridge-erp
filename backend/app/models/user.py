@@ -2,12 +2,20 @@
 User model — system users with role-based access.
 """
 
-from app.models import RFQ
+from typing import TYPE_CHECKING
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.rfq import RFQ
+    from app.models.approval import Approval
+    from app.models.purchase_order import PurchaseOrder
+    from app.models.invoice import Invoice
+    from app.models.activity_log import ActivityLog
 
 
 class User(Base, TimestampMixin):
@@ -27,21 +35,21 @@ class User(Base, TimestampMixin):
     )
 
     # ── Relationships ─────────────────────────────────────────
-    rfqs: Mapped[list["RFQ"]] = relationship(  # noqa: F821
+    rfqs: Mapped[list["RFQ"]] = relationship(
         back_populates="creator", foreign_keys="RFQ.created_by"
     )
-    # approvals: Mapped[list["Approval"]] = relationship(  # noqa: F821
-    #     back_populates="approver"
-    # )
-    # issued_purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(  # noqa: F821
-    #     back_populates="issuer", foreign_keys="PurchaseOrder.issued_by"
-    # )
-    # submitted_invoices: Mapped[list["Invoice"]] = relationship(  # noqa: F821
-    #     back_populates="submitter", foreign_keys="Invoice.submitted_by"
-    # )
-    # activity_logs: Mapped[list["ActivityLog"]] = relationship(  # noqa: F821
-    #     back_populates="user"
-    # )
+    approvals: Mapped[list["Approval"]] = relationship(
+        back_populates="approver"
+    )
+    issued_purchase_orders: Mapped[list["PurchaseOrder"]] = relationship(
+        back_populates="issuer", foreign_keys="PurchaseOrder.issued_by"
+    )
+    submitted_invoices: Mapped[list["Invoice"]] = relationship(
+        back_populates="submitter", foreign_keys="Invoice.submitted_by"
+    )
+    activity_logs: Mapped[list["ActivityLog"]] = relationship(
+        back_populates="user"
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email!r} role={self.role!r}>"

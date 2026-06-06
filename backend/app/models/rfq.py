@@ -1,4 +1,3 @@
-
 """
 RFQ (Request for Quotation) model — procurement event header.
 """
@@ -11,12 +10,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 from app.models.base import TimestampMixin
+from app.models.enums import RFQStatus
 
 if TYPE_CHECKING:
     from app.models.user import User
     from app.models.rfq_item import RFQItem
-    from app.models.rfq_vendor_assignment import RFQVendorAssignment
-
+    from app.models.rfq_vendor import RFQVendor
+    from app.models.quotation import Quotation
 
 
 class RFQ(Base, TimestampMixin):
@@ -28,8 +28,8 @@ class RFQ(Base, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="draft", index=True
+    status: Mapped[RFQStatus] = mapped_column(
+        default=RFQStatus.DRAFT, index=True
     )
     submission_deadline: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -39,18 +39,18 @@ class RFQ(Base, TimestampMixin):
     )
 
     # ── Relationships ─────────────────────────────────────────
-    creator: Mapped["User"] = relationship(  # noqa: F821
+    creator: Mapped["User"] = relationship(
         back_populates="rfqs", foreign_keys=[created_by]
     )
-    items: Mapped[list["RFQItem"]] = relationship(  # noqa: F821
+    items: Mapped[list["RFQItem"]] = relationship(
         back_populates="rfq", cascade="all, delete-orphan"
     )
-    vendor_assignments: Mapped[list["RFQVendorAssignment"]] = relationship(  # noqa: F821
+    vendor_assignments: Mapped[list["RFQVendor"]] = relationship(
         back_populates="rfq", cascade="all, delete-orphan"
     )
-    # quotations: Mapped[list["Quotation"]] = relationship(  # noqa: F821
-    #     back_populates="rfq"
-    # )
+    quotations: Mapped[list["Quotation"]] = relationship(
+        back_populates="rfq", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
-        return f"<RFQ id={self.id} number={self.rfq_number!r} status={self.status!r}>"
+        return f"<RFQ id={self.id} number={self.rfq_number!r} status={self.status.value!r}>"

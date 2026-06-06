@@ -1,22 +1,22 @@
 """
-RFQ–Vendor Assignment model — many-to-many junction table.
-
-Tracks which vendors are invited to bid on which RFQs and their
-response status.
+RFQ–Vendor Junction model — tracks which vendors are invited to bid on which RFQs.
 """
 
-from app.models.rfq import RFQ
-from app.models.vendor import Vendor
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.database import Base
 
+if TYPE_CHECKING:
+    from app.models.rfq import RFQ
+    from app.models.vendor import Vendor
 
-class RFQVendorAssignment(Base):
-    __tablename__ = "rfq_vendor_assignments"
+
+class RFQVendor(Base):
+    __tablename__ = "rfq_vendors"
 
     __table_args__ = (
         UniqueConstraint("rfq_id", "vendor_id", name="uq_rfq_vendor"),
@@ -27,10 +27,10 @@ class RFQVendorAssignment(Base):
         ForeignKey("rfqs.id", ondelete="CASCADE"), nullable=False, index=True
     )
     vendor_id: Mapped[int] = mapped_column(
-        ForeignKey("vendors.id"), nullable=False, index=True
+        ForeignKey("vendors.id", ondelete="CASCADE"), nullable=False, index=True
     )
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="invited"
+        String(20), nullable=False, default="invited", index=True
     )
     invited_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -42,12 +42,12 @@ class RFQVendorAssignment(Base):
     )
 
     # ── Relationships ─────────────────────────────────────────
-    rfq: Mapped["RFQ"] = relationship(  # noqa: F821
+    rfq: Mapped["RFQ"] = relationship(
         back_populates="vendor_assignments"
     )
-    vendor: Mapped["Vendor"] = relationship(  # noqa: F821
+    vendor: Mapped["Vendor"] = relationship(
         back_populates="rfq_assignments"
     )
 
     def __repr__(self) -> str:
-        return f"<RFQVendorAssignment rfq={self.rfq_id} vendor={self.vendor_id} status={self.status!r}>"
+        return f"<RFQVendor rfq={self.rfq_id} vendor={self.vendor_id} status={self.status!r}>"

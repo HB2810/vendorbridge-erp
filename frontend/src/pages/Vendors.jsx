@@ -93,49 +93,56 @@ const Vendors = () => {
     setIsDrawerOpen(true);
   };
 
-  const handleToggleStatus = (vendor, e) => {
+  const handleToggleStatus = async (vendor, e) => {
     e.stopPropagation();
     const newStatus = vendor.status === 'Active' ? 'Inactive' : 'Active';
-    updateVendor({
-      ...vendor,
-      status: newStatus
-    });
-    addToast(`Vendor status set to ${newStatus} for ${vendor.name}`, 'info');
+    try {
+      await updateVendor({
+        ...vendor,
+        status: newStatus
+      });
+      addToast(`Vendor status set to ${newStatus} for ${vendor.name}`, 'info');
+    } catch (err) {
+      addToast('Failed to update vendor status.', 'error');
+    }
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
 
     // Validations
-    if (!formData.name || !formData.gstNumber || !formData.contactPerson || !formData.email) {
+    if (!formData.name || !formData.contactPerson || !formData.email) {
       addToast('Error: Please populate all required fields.', 'error');
       return;
     }
 
-    if (editMode) {
-      const originalVendor = vendors.find(v => v.id === editVendorId);
-      updateVendor({
-        ...originalVendor,
-        ...formData
-      });
-      addToast(`Updated vendor profile: ${formData.name}`, 'success');
-    } else {
-      const newVnd = addVendor(formData);
-      addToast(`Registered new vendor profile: ${formData.name}`, 'success');
-      // Set the newly created vendor in drawer to preview
-      setSelectedVendor(newVnd);
+    try {
+      if (editMode) {
+        const originalVendor = vendors.find(v => v.id === editVendorId);
+        await updateVendor({
+          ...originalVendor,
+          ...formData
+        });
+        addToast(`Updated vendor profile: ${formData.name}`, 'success');
+      } else {
+        const newVnd = await addVendor(formData);
+        addToast(`Registered new vendor profile: ${formData.name}`, 'success');
+        setSelectedVendor(newVnd);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      addToast('Failed to save vendor. Check form data.', 'error');
     }
-
-    setIsModalOpen(false);
   };
 
   // Filter vendors
   const filteredVendors = vendors.filter(vendor => {
+    const q = searchQuery.toLowerCase();
     const matchesSearch = 
-      vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.gstNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.contactPerson.toLowerCase().includes(searchQuery.toLowerCase());
+      (vendor.name || '').toLowerCase().includes(q) ||
+      String(vendor.vendor_code || vendor.id).toLowerCase().includes(q) ||
+      (vendor.gstNumber || '').toLowerCase().includes(q) ||
+      (vendor.contactPerson || '').toLowerCase().includes(q);
 
     const matchesStatus = statusFilter === 'All' || vendor.status === statusFilter;
     const matchesCategory = categoryFilter === 'All' || vendor.category === categoryFilter;
@@ -236,7 +243,7 @@ const Vendors = () => {
                     onClick={() => handleOpenDrawer(vendor)}
                     className="cursor-pointer"
                   >
-                    <td className="font-mono text-xs text-indigo-400 font-bold">{vendor.id}</td>
+                    <td className="font-mono text-xs text-indigo-400 font-bold">{vendor.vendor_code || vendor.id}</td>
                     <td className="font-semibold text-slate-100">{vendor.name}</td>
                     <td><span className="font-mono text-xs">{vendor.category}</span></td>
                     <td className="font-mono text-xs">{vendor.gstNumber}</td>
@@ -465,7 +472,7 @@ const Vendors = () => {
             {/* Header */}
             <div className="flex justify-between items-center pb-4 border-b border-slate-800 mb-6">
               <div>
-                <span className="font-mono text-xs text-indigo-400 font-bold">{selectedVendor.id}</span>
+                <span className="font-mono text-xs text-indigo-400 font-bold">{selectedVendor.vendor_code || selectedVendor.id}</span>
                 <h3 className="text-base font-bold text-white uppercase tracking-tight mt-0.5">{selectedVendor.name}</h3>
               </div>
               <button 

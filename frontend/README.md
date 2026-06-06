@@ -2,6 +2,8 @@
 
 VendorBridge is a corporate sourcing and procurement ERP dashboard designed with a modern, clean, high-contrast visual interface. It facilitates vendor directory lookup, RFQ management, quotation analysis, approvals, and invoices in a streamlined, premium layout.
 
+---
+
 ## Key Modules & Features
 
 - **Auth Portal**: Clean, modern Login and Register modules with robust client-side validator checks, premium ambient background blobs, and browser autocomplete suppression.
@@ -13,38 +15,49 @@ VendorBridge is a corporate sourcing and procurement ERP dashboard designed with
 - **Approvals Workflow**: Audited procurement approval pipeline mapping out multi-stage manager sign-offs.
 - **Invoices & POs**: Financial control deck listing PO generation, print formatting, and tracking.
 
-## Technology Stack
-
-- **Framework**: React / Vite
-- **Styling**: Tailwind CSS & custom CSS overrides for light-theme readability
-- **Icons**: Lucide React
-- **Theme**: Premium Royal Blue & Slate White visual theme
+---
 
 ## Getting Started
 
-### Prerequisites
+### 1. Prerequisites
+Ensure you have the following installed:
+* [Node.js](https://nodejs.org/) (v18.x or above)
+* [npm](https://www.npmjs.com/) (v9.x or above)
 
-- Node.js (v18.x or above)
-- npm (v9.x or above)
+### 2. Navigate to the frontend directory
+From the root of the repository:
+```bash
+cd frontend
+```
 
-### Setup & Installation
+### 3. Install Dependencies
+```bash
+npm install
+```
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+### 4. Ensure the Backend is Running
+The frontend is pre-configured to communicate with the FastAPI backend at `http://127.0.0.1:8000`. Make sure you have started the backend server (see the backend README for instructions).
 
-2. Run local development server:
-   ```bash
-   npm run dev
-   ```
+### 5. Run the local development server
+```bash
+npm run dev
+```
+Open your browser and navigate to the port displayed in the terminal (usually [http://localhost:5173/](http://localhost:5173/)).
 
-3. Build production bundle:
-   ```bash
-   npm run build
-   ```
+---
 
-4. Lint code for style compliance:
-   ```bash
-   npm run lint
-   ```
+## Login Credentials
+Once the database is seeded, use the following logins to test different roles:
+
+| Role | Email (ID) | Password | Name |
+| :--- | :--- | :--- | :--- |
+| **System Administrator** | `admin@example.com` | `password123` | System Administrator |
+| **Procurement Officer** | `po@example.com` | `password123` | Sarah Jenkins (Officer) |
+| **Manager** | `manager@example.com` | `password123` | Marcus Vance (Manager) |
+| **Vendor User** | `vendor@example.com` | `password123` | Optima Power (Vendor) |
+
+---
+
+## Project Commands
+* **Build production bundle:** `npm run build`
+* **Lint code:** `npm run lint`

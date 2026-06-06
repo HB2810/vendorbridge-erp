@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     # ── Database ─────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite:///./vendorbridge.db"
 
+    # ── Security ─────────────────────────────────────────────────
+    JWT_SECRET_KEY: str = "supersecretkeychangeinprod"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+
 
 @lru_cache
 def get_settings() -> Settings:

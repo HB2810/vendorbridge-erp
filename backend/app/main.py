@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.database.database import Base, engine
 from app import models  # noqa: F401
+from app.routes.auth import router as auth_router
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -69,6 +70,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Routers ──────────────────────────────────────────────────────
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
 
 
 # ── Root endpoint ────────────────────────────────────────────────

@@ -21,27 +21,119 @@ const normalizeVendor = (apiVendor) => ({
   pastPOs: []
 });
 
+const normalizeRFQ = (apiRfq) => ({
+  id: apiRfq.id,
+  rfq_number: apiRfq.rfq_number,
+  title: apiRfq.title,
+  description: apiRfq.description || '',
+  category: apiRfq.category || '',
+  deadline: apiRfq.deadline ? apiRfq.deadline.split('T')[0] : '',
+  status: apiRfq.status === 'OPEN' ? 'Sent' : apiRfq.status === 'CLOSED' ? 'Closed' : 'Draft',
+  date: apiRfq.created_at ? apiRfq.created_at.split('T')[0] : '',
+  createdBy: `User #${apiRfq.created_by}`,
+  items: (apiRfq.items || []).map(item => ({
+    id: item.id,
+    name: item.item_name,
+    description: item.description || '',
+    qty: parseFloat(item.quantity) || 0,
+    unit: item.unit || 'Pcs'
+  })),
+  assignedVendors: []
+});
+
 export const AppProvider = ({ children }) => {
   const { user } = useAuth();
   const [vendors, setVendors] = useState([]);
+  const [rfqs, setRfqs] = useState([]);
+  const [approvals, setApprovals] = useState([]);
 
   const fetchVendors = async () => {
-    if (!user) return;
+    if (!user) return [];
     try {
       const response = await api.get('/api/vendors?size=100');
       const mapped = response.data.items.map(normalizeVendor);
       setVendors(mapped);
+      return mapped;
     } catch (error) {
       console.error('Error fetching vendors:', error);
+      return [];
+    }
+  };
+
+  const fetchRFQs = async () => {
+    if (!user) return [];
+    try {
+      const response = await api.get('/api/rfqs?size=100');
+      const mapped = response.data.items.map(normalizeRFQ);
+      setRfqs(mapped);
+      return mapped;
+    } catch (error) {
+      console.error('Error fetching RFQs:', error);
+      return [];
+    }
+  };
+
+  const fetchApprovals = async (currentRfqs = rfqs, currentVendors = vendors) => {
+    if (!user) return;
+    try {
+      const [appRes, quotRes] = await Promise.all([
+        api.get('/api/approvals'),
+        api.get('/api/quotations?size=100')
+      ]);
+
+      const rfqMap = {};
+      currentRfqs.forEach(r => rfqMap[r.id] = r);
+
+      const quotMap = {};
+      quotRes.data.items.forEach(q => quotMap[q.id] = q);
+
+      const mapped = appRes.data.map(app => {
+        const q = quotMap[app.quotation_id];
+        const r = q ? rfqMap[q.rfq_id] : null;
+        const v = q ? currentVendors.find(v => v.id === q.vendor_id) : null;
+        
+        return {
+          id: app.id,
+          quotation_id: app.quotation_id,
+          poReference: `REQ-${app.quotation_id}`,
+          vendorName: v ? v.name : `Vendor #${q?.vendor_id}`,
+          vendorId: q?.vendor_id,
+          date: app.created_at ? app.created_at.split('T')[0] : '',
+          rfqTitle: r ? r.title : 'Procurement Sourcing',
+          requestedBy: `User #${r?.created_by || 'System'}`,
+          amount: q ? parseFloat(q.grand_total) : 0,
+          status: app.status === 'APPROVED' ? 'Approved' : app.status === 'REJECTED' ? 'Rejected' : 'Pending',
+          remarks: app.remarks,
+          timeline: [
+            { state: 'Created', timestamp: app.created_at, actor: 'System', comments: 'Approval workflow initiated' },
+            app.approved_at ? { 
+              state: app.status === 'APPROVED' ? 'Approved' : 'Rejected', 
+              timestamp: app.approved_at, 
+              actor: `Manager #${app.approved_by}`, 
+              comments: app.remarks 
+            } : null
+          ].filter(Boolean)
+        };
+      });
+      setApprovals(mapped);
+    } catch (error) {
+      console.error('Error fetching approvals:', error);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchVendors();
-    } else {
-      setVendors([]);
-    }
+    const initData = async () => {
+      if (user) {
+        const fetchedVendors = await fetchVendors();
+        const fetchedRfqs = await fetchRFQs();
+        await fetchApprovals(fetchedRfqs, fetchedVendors);
+      } else {
+        setVendors([]);
+        setRfqs([]);
+        setApprovals([]);
+      }
+    };
+    initData();
   }, [user]);
 
   // Vendor handlers
@@ -104,12 +196,34 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const updateApproval = async (id, status, remarks, actor) => {
+    const approvalObj = approvals.find(a => a.id === id);
+    if (!approvalObj) {
+      console.error('Approval object not found for id:', id);
+      return;
+    }
+    const quotationId = approvalObj.quotation_id;
+    const endpoint = status === 'Approved' ? 'approve' : 'reject';
+    try {
+      await api.post(`/api/approvals/${quotationId}/${endpoint}`, {
+        remarks: remarks || `${status} the request.`
+      });
+      await fetchApprovals(rfqs, vendors);
+    } catch (error) {
+      console.error(`Error updating approval for quotation ${quotationId}:`, error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       vendors,
+      rfqs,
+      approvals,
       addVendor,
       updateVendor,
-      deleteVendor
+      deleteVendor,
+      updateApproval
     }}>
       {children}
     </AppContext.Provider>

@@ -147,7 +147,7 @@ const Sidebar = () => {
             {!isCollapsed && (
               <button
                 onClick={handleLogout}
-                className="flex items-center justify-center gap-2 w-full py-1.5 border border-slate-700 hover:border-rose-500/50 hover:bg-rose-950/20 text-xs font-mono text-rose-400 rounded transition-all"
+                className="logout-btn flex items-center justify-center gap-2 w-full py-1.5 border border-slate-700 hover:border-rose-500/50 hover:bg-rose-950/20 text-xs font-mono text-rose-400 rounded transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 Log Out Session
@@ -156,7 +156,7 @@ const Sidebar = () => {
             {isCollapsed && (
               <button
                 onClick={handleLogout}
-                className="mx-auto p-1.5 text-rose-400 hover:text-rose-300 rounded hover:bg-[#1A1120]"
+                className="logout-btn mx-auto p-1.5 text-rose-400 hover:text-rose-300 rounded hover:bg-[#1A1120]"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />

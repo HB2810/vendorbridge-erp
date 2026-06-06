@@ -163,6 +163,11 @@ aside button {
   color: #E2E8F0 !important;
 }
 
+aside button.logout-btn {
+  border-color: #EF4444 !important;
+  color: #000000 !important;
+}
+
 aside button:hover {
   background-color: #EF4444 !important;
   color: #FFFFFF !important;

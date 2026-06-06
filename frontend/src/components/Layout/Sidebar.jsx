@@ -81,16 +81,20 @@ const Sidebar = () => {
         <div className="flex items-center justify-between px-4 h-16 border-b border-slate-700">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 bg-indigo-brand rounded flex items-center justify-center font-bold text-white tracking-wider text-sm">
-                VB
-              </div>
+              <img 
+                src="/vendorbridge_logo.png" 
+                alt="Logo" 
+                className="w-7 h-7 rounded object-cover" 
+              />
               <span className="font-bold tracking-tight text-white text-base">VendorBridge</span>
             </div>
           )}
           {isCollapsed && (
-            <div className="w-7 h-7 mx-auto bg-indigo-brand rounded flex items-center justify-center font-bold text-white tracking-wider text-sm">
-              VB
-            </div>
+            <img 
+              src="/vendorbridge_logo.png" 
+              alt="Logo" 
+              className="w-7 h-7 mx-auto rounded object-cover" 
+            />
           )}
           
           <button 

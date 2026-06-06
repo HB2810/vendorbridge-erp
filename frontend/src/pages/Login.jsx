@@ -76,9 +76,11 @@ const Login = () => {
         
         {/* Logo and Branding */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-indigo-brand rounded-md flex items-center justify-center mx-auto mb-3 shadow-[0_0_20px_rgba(79,70,229,0.3)]">
-            <Shield className="w-6 h-6 text-white" />
-          </div>
+          <img 
+            src="/vendorbridge_logo.png" 
+            alt="VendorBridge Logo" 
+            className="w-12 h-12 rounded mx-auto mb-3 object-cover border border-slate-200/20 shadow-[0_0_20px_rgba(37,99,235,0.2)]" 
+          />
           <h2 className="text-2xl font-bold tracking-tight text-white font-sans uppercase">VendorBridge</h2>
           <p className="text-xs text-gray-secondary tracking-widest font-mono uppercase mt-1">Enterprise Procurement ERP</p>
         </div>
